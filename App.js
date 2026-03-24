@@ -1,20 +1,141 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React from "react";
+import { Text } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
+import SplashScreen from "./src/screens/SplashScreen";
+import OnboardingScreen from "./src/screens/OnBoardingScreen";
+import LoginScreen from "./src/screens/LoginScreen";
+import OTPScreen from "./src/screens/OTPScreen";
+import HomeScreen from "./src/screens/HomeScreen";
+import CitySearchScreen from "./src/components/CitySearchScreen";
+import BusResultsScreen from "./src/components/BusResultScreen";
+import FilterScreen from "./src/components/FilterScreen";
+import BookingScreen from "./src/screens/BookingScreen";
+import BookingDetailsScreen from "./src/screens/BookingDetailsScreen";
+import OfferScreen from "./src/screens/OfferScreen";
+import SleeperSeatSelectionScreen from "./src/components/SleeperSeatSelectionScreen";
+import SeaterSeatSelectionScreen from "./src/components/SeaterSeatSelectionScreen";
+import HelpScreen from "./src/screens/HelpScreen";
+import FAQListScreen from "./src/screens/FAQListScreen";
+import FAQAnswerScreen from "./src/screens/FAQAnswerScreen";
+import ProfileScreen from "./src/screens/ProfileScreen";
+import PersonalDetailsScreen from "./src/components/PersonalDetailsScreen";
+
+Text.defaultProps = Text.defaultProps || {};
+Text.defaultProps.allowFontScaling = false;
+
+const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaProvider>
+      <NavigationContainer>
+
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+            animation: "none"
+          }}
+        >
+
+          <Stack.Screen
+            name="Splash"
+            component={SplashScreen}
+          />
+
+          <Stack.Screen
+            name="Onboarding"
+            component={OnboardingScreen}
+          />
+
+          <Stack.Screen
+            name="Login"
+            component={LoginScreen}
+          />
+
+          {/* ✅ OTP SCREEN ADDED */}
+
+          <Stack.Screen
+            name="OTP"
+            component={OTPScreen}
+          />
+
+          <Stack.Screen
+            name="Home"
+            component={HomeScreen}
+          />
+
+          <Stack.Screen
+            name="CitySearch"
+            component={CitySearchScreen}
+          />
+
+          <Stack.Screen
+            name="BusResults"
+            component={BusResultsScreen}
+          />
+
+          <Stack.Screen
+            name="Filter"
+            component={FilterScreen}
+          />
+
+          <Stack.Screen
+            name="Bookings"
+            component={BookingScreen}
+          />
+
+          <Stack.Screen
+            name="BookingDetails"
+            component={BookingDetailsScreen}
+          />
+
+          <Stack.Screen
+            name="Offers"
+            component={OfferScreen}
+          />
+
+          <Stack.Screen
+            name="SeaterSeatSelection"
+            component={SeaterSeatSelectionScreen}
+          />
+
+          <Stack.Screen
+            name="SleeperSeatSelection"
+            component={SleeperSeatSelectionScreen}
+          />
+
+          <Stack.Screen
+            name="Help"
+            component={HelpScreen}
+          />
+
+          <Stack.Screen
+            name="FAQList"
+            component={FAQListScreen}
+          />
+
+          <Stack.Screen
+            name="FAQAnswer"
+            component={FAQAnswerScreen}
+          />
+
+          <Stack.Screen
+            name="Profile"
+            component={ProfileScreen}
+          />
+
+          <Stack.Screen
+            name="PersonalDetails"
+            component={PersonalDetailsScreen}
+          />
+
+        </Stack.Navigator>
+
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

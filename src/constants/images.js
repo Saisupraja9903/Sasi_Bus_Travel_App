@@ -1,0 +1,20 @@
+export const IMAGES = {
+  BUS: require("../../assets/logo.png"),
+  ONBOARDING1: require("../../assets/onboarding1.png"),
+  ONBOARDING2: require("../../assets/onboarding2.png"),
+  ONBOARDING3: require("../../assets/onboarding3.png"),
+  OFFER1: require("../../assets/offer1.png"),
+  OFFER2: require("../../assets/offer2.png"),
+  OFFER3: require("../../assets/offer3.png"),
+  OFFER4: require("../../assets/offer4.png"),
+  AXIS: require("../../assets/axislogo.png"),
+  HDFC: require("../../assets/HDFClogo.png"),
+  CHATBOT: require("../../assets/chatbot.png"),
+  IDBI: require("../../assets/IDBIlogo.png"),
+  OFFER6: require("../../assets/offers/offer6.png"),
+  OFFER7: require("../../assets/offers/offer1.png"),
+  OFFER8: require("../../assets/offers/offer2.png"),
+  OFFER9: require("../../assets/offers/offer3.png"),
+  OFFER10: require("../../assets/offers/offer4.png"),
+
+};
