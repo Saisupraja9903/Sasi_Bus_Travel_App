@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, SafeAreaView, TouchableOpacity, StyleSheet, FlatList } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, FlatList } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { faqData } from "../components/faqData";
 

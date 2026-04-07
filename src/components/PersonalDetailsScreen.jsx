@@ -4,19 +4,19 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   TextInput,
   ScrollView,
   Modal,
-  Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import AppModal from "./AppModal";
 
 export default function PersonalDetailsScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { phone, name: paramName } = route.params || {};
+  const { phone, name: paramName, passengers: paramPassengers } = route.params || {};
   const [gender, setGender] = useState("Female");
   const [referral, setReferral] = useState("");
 
@@ -29,6 +29,7 @@ export default function PersonalDetailsScreen() {
   const [mobile, setMobile] = useState(initialMobile);
   const [email, setEmail] = useState(initialEmail);
   const [dob, setDob] = useState(initialDob);
+  const [emailError, setEmailError] = useState("");
   
   const [isNameEditing, setIsNameEditing] = useState(false);
   const [isMobileEditing, setIsMobileEditing] = useState(false);
@@ -40,37 +41,76 @@ export default function PersonalDetailsScreen() {
   const [calendarView, setCalendarView] = useState("days"); // "days", "months", "years"
 
   // Passenger State
-  const [passengers, setPassengers] = useState([]);
+  const [passengers, setPassengers] = useState(paramPassengers || []);
   const [showAddPassenger, setShowAddPassenger] = useState(false);
   const [newPassenger, setNewPassenger] = useState({
     name: "",
     age: "",
     gender: "Male",
   });
+  const [passengerErrors, setPassengerErrors] = useState({ name: "", age: "" });
+
+  // Modal State
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [passengerToDelete, setPassengerToDelete] = useState(null);
 
   const handleSave = () => {
     // Email Validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert("Invalid Email", "Please enter a valid email address.");
+      setEmailError("Please enter a valid email address.");
       return;
     }
+    setEmailError(""); // Clear error if valid
 
     // Navigate back to Profile with updated name and mobile
-    navigation.navigate("Profile", { name, phone: mobile });
+    navigation.navigate("Profile", { name, phone: mobile, passengers });
   };
 
-  const hasChanges = name !== initialName || mobile !== initialMobile || email !== initialEmail || dob !== initialDob;
+  // Using JSON.stringify for a simple deep comparison of the passengers array
+  const hasChanges =
+    name !== initialName ||
+    mobile !== initialMobile ||
+    email !== initialEmail ||
+    dob.getTime() !== initialDob.getTime() ||
+    JSON.stringify(passengers) !== JSON.stringify(paramPassengers || []);
 
   // Add Passenger Logic
   const handleAddPassenger = () => {
-    if (!newPassenger.name || !newPassenger.age) {
-      Alert.alert("Missing Details", "Please enter passenger name and age.");
-      return;
+    const trimmedName = newPassenger.name.trim();
+    const ageNumber = parseInt(newPassenger.age, 10);
+    const errors = { name: "", age: "" };
+    let hasError = false;
+
+    if (!trimmedName || trimmedName.length < 3) {
+      errors.name = "Please enter a name with at least 3 characters.";
+      hasError = true;
     }
-    setPassengers([...passengers, newPassenger]);
+    if (isNaN(ageNumber) || ageNumber < 1 || ageNumber > 120) {
+      errors.age = "Please enter a valid age between 1 and 120.";
+      hasError = true;
+    }
+    setPassengerErrors(errors);
+    if (hasError) return;
+    setPassengers([
+      ...passengers,
+      { ...newPassenger, name: trimmedName, age: String(ageNumber) },
+    ]);
     setNewPassenger({ name: "", age: "", gender: "Male" });
     setShowAddPassenger(false);
+  };
+
+  // Delete Passenger Logic
+  const handleDeletePassenger = (indexToDelete) => {
+    setPassengerToDelete(indexToDelete);
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDeletePassenger = () => {
+    const updatedPassengers = passengers.filter((_, index) => index !== passengerToDelete);
+    setPassengers(updatedPassengers);
+    setDeleteModalVisible(false);
+    setPassengerToDelete(null);
   };
 
   // Calendar Helpers
@@ -110,11 +150,8 @@ export default function PersonalDetailsScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-      {/* Main Card */}
-      <View style={styles.card}>
-
         {/* Full Name */}
-        <View style={styles.row}>
+        <View style={styles.detailBox}>
           <MaterialIcons name="person-outline" size={22} color="#1E6BD6" />
           <View style={styles.textContainer}>
             <Text style={styles.label}>Full Name</Text>
@@ -134,10 +171,8 @@ export default function PersonalDetailsScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.divider} />
-
         {/* Mobile */}
-        <View style={styles.row}>
+        <View style={styles.detailBox}>
           <Feather name="phone" size={20} color="#1E6BD6" />
           <View style={styles.textContainer}>
             <Text style={styles.label}>Mobile no</Text>
@@ -158,10 +193,8 @@ export default function PersonalDetailsScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.divider} />
-
         {/* Gender */}
-        <View style={styles.genderRow}>
+        <View style={[styles.detailBox, styles.genderBox]}>
           <Text style={styles.label}>Gender</Text>
 
           <View style={styles.genderOptions}>
@@ -195,10 +228,8 @@ export default function PersonalDetailsScreen() {
           </View>
         </View>
 
-        <View style={styles.divider} />
-
         {/* DOB */}
-        <View style={styles.row}>
+        <View style={styles.detailBox}>
           <Ionicons name="calendar-outline" size={22} color="#1E6BD6" />
           <View style={styles.textContainer}>
             <Text style={styles.label}>Date of Birth</Text>
@@ -216,10 +247,8 @@ export default function PersonalDetailsScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.divider} />
-
         {/* Email */}
-        <View style={styles.row}>
+        <View style={styles.detailBox}>
           <MaterialIcons name="mail-outline" size={22} color="#1E6BD6" />
           <View style={styles.textContainer}>
             <Text style={styles.label}>Email address</Text>
@@ -227,7 +256,10 @@ export default function PersonalDetailsScreen() {
               <TextInput
                 style={styles.editInput}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (emailError) setEmailError("");
+                }}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoFocus={true}
@@ -243,7 +275,7 @@ export default function PersonalDetailsScreen() {
             <Text style={styles.edit}>Edit</Text>
           </TouchableOpacity>
         </View>
-      </View>
+        {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
       {/* Passenger List */}
       <View style={styles.passengerSection}>
@@ -258,8 +290,13 @@ export default function PersonalDetailsScreen() {
 
         {passengers.map((p, index) => (
           <View key={index} style={styles.passengerItem}>
-            <Text style={styles.passengerName}>{p.name}</Text>
-            <Text style={styles.passengerDetails}>{p.gender}, {p.age} years</Text>
+            <View>
+              <Text style={styles.passengerName}>{p.name}</Text>
+              <Text style={styles.passengerDetails}>{p.gender}, {p.age} years</Text>
+            </View>
+            <TouchableOpacity onPress={() => handleDeletePassenger(index)}>
+              <MaterialIcons name="delete-outline" size={24} color="#D32F2F" />
+            </TouchableOpacity>
           </View>
         ))}
       </View>
@@ -360,6 +397,7 @@ export default function PersonalDetailsScreen() {
                     style={[styles.monthItem, displayMonth.getMonth() === index && styles.selectedItem]}
                     onPress={() => {
                       const d = new Date(displayMonth);
+                      d.setDate(1); // Fix rollover: set to 1st before changing month
                       d.setMonth(index);
                       setDisplayMonth(d);
                       setCalendarView("days");
@@ -378,6 +416,7 @@ export default function PersonalDetailsScreen() {
                       style={[styles.yearItem, displayMonth.getFullYear() === year && styles.selectedItem]}
                       onPress={() => {
                         const d = new Date(displayMonth);
+                        d.setDate(1); // Fix rollover for leap years
                         d.setFullYear(year);
                         setDisplayMonth(d);
                         setCalendarView("days");
@@ -406,19 +445,33 @@ export default function PersonalDetailsScreen() {
             <TextInput
               placeholder="Passenger Name"
               value={newPassenger.name}
-              onChangeText={(text) => setNewPassenger({ ...newPassenger, name: text })}
+              onChangeText={(text) => {
+                setNewPassenger({ ...newPassenger, name: text });
+                if (passengerErrors.name)
+                  setPassengerErrors((p) => ({ ...p, name: "" }));
+              }}
               style={styles.modalInput}
               placeholderTextColor="#999"
             />
+            {passengerErrors.name ? (
+              <Text style={styles.errorText}>{passengerErrors.name}</Text>
+            ) : null}
 
             <TextInput
               placeholder="Age"
               value={newPassenger.age}
-              onChangeText={(text) => setNewPassenger({ ...newPassenger, age: text })}
+              onChangeText={(text) => {
+                setNewPassenger({ ...newPassenger, age: text });
+                if (passengerErrors.age)
+                  setPassengerErrors((p) => ({ ...p, age: "" }));
+              }}
               keyboardType="number-pad"
               style={styles.modalInput}
               placeholderTextColor="#999"
             />
+            {passengerErrors.age ? (
+              <Text style={styles.errorText}>{passengerErrors.age}</Text>
+            ) : null}
 
             <View style={styles.modalGenderContainer}>
               <Text style={styles.modalLabel}>Gender</Text>
@@ -444,13 +497,31 @@ export default function PersonalDetailsScreen() {
               <Text style={styles.saveBtnText}>Add Passenger</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.closeModalBtn} onPress={() => setShowAddPassenger(false)}>
+            <TouchableOpacity
+              style={styles.closeModalBtn}
+              onPress={() => {
+                setShowAddPassenger(false);
+                setPassengerErrors({ name: "", age: "" });
+                setNewPassenger({ name: "", age: "", gender: "Male" });
+              }}
+            >
               <Text style={styles.closeModalText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
+      {/* DELETE CONFIRMATION MODAL */}
+      <AppModal
+        visible={deleteModalVisible}
+        title="Delete Passenger"
+        message="Are you sure you want to remove this passenger details?"
+        type="error"
+        showCancel={true}
+        confirmText="Delete"
+        onConfirm={confirmDeletePassenger}
+        onCancel={() => setDeleteModalVisible(false)}
+      />
       </ScrollView>
     </SafeAreaView>
   );
@@ -477,16 +548,15 @@ const styles = StyleSheet.create({
     marginLeft: 15,
   },
 
-  card: {
+  detailBox: {
     backgroundColor: "white",
     borderRadius: 15,
     padding: 15,
-  },
-
-  row: {
+    marginBottom: 15,
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 15,
+    borderWidth: 1,
+    borderColor: "#E5E5E5",
   },
 
   textContainer: {
@@ -520,16 +590,10 @@ const styles = StyleSheet.create({
     color: "#333",
   },
 
-  divider: {
-    height: 1,
-    backgroundColor: "#eee",
-    marginVertical: 10,
+  genderBox: {
+    flexDirection: "column",
+    alignItems: "flex-start",
   },
-
-  genderRow: {
-    paddingVertical: 15,
-  },
-
   genderOptions: {
     flexDirection: "row",
     marginTop: 10,
@@ -571,9 +635,11 @@ const styles = StyleSheet.create({
 
   passengerSection: {
     backgroundColor: "white",
-    marginTop: 20,
     borderRadius: 15,
     padding: 18,
+    borderWidth: 1,
+    borderColor: "#E5E5E5",
+    marginBottom: 15,
   },
   passengerHeaderRow: {
     flexDirection: "row",
@@ -586,7 +652,7 @@ const styles = StyleSheet.create({
   },
 
   referralTitle: {
-    marginTop: 25,
+    marginTop: 10,
     marginBottom: 10,
     fontSize: 15,
   },
@@ -598,6 +664,8 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     paddingHorizontal: 15,
     paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#E5E5E5",
   },
 
   input: {
@@ -714,13 +782,23 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   passengerItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     borderTopWidth: 1,
     borderTopColor: "#eee",
     marginTop: 15,
-    paddingTop: 10,
+    paddingVertical: 10,
   },
   passengerName: { fontSize: 16, fontWeight: "600", color: "#333" },
   passengerDetails: { fontSize: 14, color: "#666", marginTop: 2 },
+
+  errorText: {
+    color: "#D32F2F",
+    fontSize: 12,
+    marginTop: -5,
+    marginBottom: 10,
+  },
 
   /* Selection Views */
   monthsGrid: { 

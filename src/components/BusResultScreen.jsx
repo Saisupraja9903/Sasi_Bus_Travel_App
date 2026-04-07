@@ -5,8 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, FontAwesome } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import FilterScreen, { initialFilterState } from "./FilterScreen";
@@ -29,6 +29,36 @@ const busList = [
     droppingPoint: "Secunderabad",
     smartCancellation: true,
     departureTimeSlot: "18_24",
+    route: ["Hyderabad", "Kurnool", "Gooty", "Anantapur", "Bangalore"],
+    photos: [
+      "https://images.unsplash.com/photo-1524678606370-a47ad25cb82a?auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=60",
+    ],
+    amenities: [
+      { icon: "bed-outline", label: "Blanket & Pillow" },
+      { icon: "television-guide", label: "Entertainment" },
+      { icon: "cctv", label: "CCTV Tracking" },
+      { icon: "wifi", label: "Wi-Fi" },
+      { icon: "battery-charging", label: "Charging Point" },
+    ],
+    boardingPoints: [
+      { title: "Miyapur", subtitle: "Near petrol bunk" },
+      { title: "Kukatpally", subtitle: "Opposite Mall" },
+      { title: "Ameerpet", subtitle: "Near metro station" },
+    ],
+    droppingPoints: [
+      { title: "Secunderabad", subtitle: "Railway Station" },
+      { title: "Jubilee Hills", subtitle: "Check Post" },
+      { title: "Gachibowli", subtitle: "DLF Building" },
+    ],
+    ratingDistribution: [
+      { stars: 5, percent: 0.60 },
+      { stars: 4, percent: 0.20 },
+      { stars: 3, percent: 0.10 },
+      { stars: 2, percent: 0.05 },
+      { stars: 1, percent: 0.05 },
+    ],
   },
   {
     id: "b2",
@@ -45,6 +75,30 @@ const busList = [
     operator: "Kaveri Travels",
     pickupPoint: "Ameerpet",
     droppingPoint: "Jubilee Hills",
+    route: ["Hyderabad", "Bangalore"],
+    photos: [
+      "https://images.unsplash.com/photo-1524678606370-a47ad25cb82a?auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&w=800&q=60",
+    ],
+    amenities: [
+      { icon: "television-guide", label: "Entertainment" },
+      { icon: "battery-charging", label: "Charging Point" },
+    ],
+    boardingPoints: [
+      { title: "Ameerpet", subtitle: "Near metro station" },
+      { title: "Kukatpally", subtitle: "Opposite Mall" },
+    ],
+    droppingPoints: [
+      { title: "Jubilee Hills", subtitle: "Check Post" },
+      { title: "Gachibowli", subtitle: "DLF Building" },
+    ],
+    ratingDistribution: [
+      { stars: 5, percent: 0.10 },
+      { stars: 4, percent: 0.15 },
+      { stars: 3, percent: 0.25 },
+      { stars: 2, percent: 0.30 },
+      { stars: 1, percent: 0.20 },
+    ],
     smartCancellation: false,
     departureTimeSlot: "18_24",
   },
@@ -63,6 +117,27 @@ const busList = [
     operator: "Somanvi Vinayak Travels",
     pickupPoint: "Gachibowli",
     droppingPoint: "Hitec City",
+    route: ["Hyderabad", "Hitec City"],
+    photos: [
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=60",
+    ],
+    amenities: [
+      { icon: "cctv", label: "CCTV Tracking" },
+      { icon: "wifi", label: "Wi-Fi" },
+    ],
+    boardingPoints: [
+      { title: "Gachibowli", subtitle: "DLF Building" },
+    ],
+    droppingPoints: [
+      { title: "Hitec City", subtitle: "Near Cyber Towers" },
+    ],
+    ratingDistribution: [
+      { stars: 5, percent: 0.70 },
+      { stars: 4, percent: 0.15 },
+      { stars: 3, percent: 0.10 },
+      { stars: 2, percent: 0.03 },
+      { stars: 1, percent: 0.02 },
+    ],
     smartCancellation: true,
     departureTimeSlot: "18_24",
   },
@@ -81,6 +156,27 @@ const busList = [
     operator: "Divya Travels",
     pickupPoint: "Madhapur",
     droppingPoint: "LB Nagar",
+    route: ["Hyderabad", "LB Nagar"],
+    photos: [
+      "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&w=800&q=60",
+    ],
+    amenities: [
+      { icon: "bed-outline", label: "Blanket & Pillow" },
+      { icon: "battery-charging", label: "Charging Point" },
+    ],
+    boardingPoints: [
+      { title: "Madhapur", subtitle: "Near Durgam Cheruvu" },
+    ],
+    droppingPoints: [
+      { title: "LB Nagar", subtitle: "Bus Stop" },
+    ],
+    ratingDistribution: [
+      { stars: 5, percent: 0.30 },
+      { stars: 4, percent: 0.25 },
+      { stars: 3, percent: 0.20 },
+      { stars: 2, percent: 0.15 },
+      { stars: 1, percent: 0.10 },
+    ],
     smartCancellation: false,
     departureTimeSlot: "18_24",
   },
@@ -99,6 +195,29 @@ const busList = [
     operator: "Mahendra Travels",
     pickupPoint: "Kukatpally",
     droppingPoint: "Secunderabad",
+    route: ["Hyderabad", "Secunderabad"],
+    photos: [
+      "https://images.unsplash.com/photo-1524678606370-a47ad25cb82a?auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=60",
+    ],
+    amenities: [
+      { icon: "bed-outline", label: "Blanket & Pillow" },
+      { icon: "wifi", label: "Wi-Fi" },
+      { icon: "battery-charging", label: "Charging Point" },
+    ],
+    boardingPoints: [
+      { title: "Kukatpally", subtitle: "Opposite Mall" },
+    ],
+    droppingPoints: [
+      { title: "Secunderabad", subtitle: "Railway Station" },
+    ],
+    ratingDistribution: [
+      { stars: 5, percent: 0.50 },
+      { stars: 4, percent: 0.30 },
+      { stars: 3, percent: 0.10 },
+      { stars: 2, percent: 0.05 },
+      { stars: 1, percent: 0.05 },
+    ],
     smartCancellation: true,
     departureTimeSlot: "18_24",
   },
@@ -117,6 +236,28 @@ const busList = [
     operator: "Samanvi Citiconnect",
     pickupPoint: "Kukatpally",
     droppingPoint: "Madhapur",
+    route: ["Hyderabad", "Madhapur"],
+    photos: [
+      "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=60",
+    ],
+    amenities: [
+      { icon: "television-guide", label: "Entertainment" },
+      { icon: "cctv", label: "CCTV Tracking" },
+    ],
+    boardingPoints: [
+      { title: "Kukatpally", subtitle: "Opposite Mall" },
+    ],
+    droppingPoints: [
+      { title: "Madhapur", subtitle: "Near Durgam Cheruvu" },
+    ],
+    ratingDistribution: [
+      { stars: 5, percent: 0.65 },
+      { stars: 4, percent: 0.20 },
+      { stars: 3, percent: 0.10 },
+      { stars: 2, percent: 0.03 },
+      { stars: 1, percent: 0.02 },
+    ],
     smartCancellation: false,
     departureTimeSlot: "18_24",
   },
@@ -135,6 +276,27 @@ const busList = [
     operator: "Flix Bus",
     pickupPoint: "Kukatpally",
     droppingPoint: "Madhapur",
+    route: ["Hyderabad", "Madhapur"],
+    photos: [
+      "https://images.unsplash.com/photo-1524678606370-a47ad25cb82a?auto=format&fit=crop&w=800&q=60",
+    ],
+    amenities: [
+      { icon: "wifi", label: "Wi-Fi" },
+      { icon: "battery-charging", label: "Charging Point" },
+    ],
+    boardingPoints: [
+      { title: "Kukatpally", subtitle: "Opposite Mall" },
+    ],
+    droppingPoints: [
+      { title: "Madhapur", subtitle: "Near Durgam Cheruvu" },
+    ],
+    ratingDistribution: [
+      { stars: 5, percent: 0.40 },
+      { stars: 4, percent: 0.30 },
+      { stars: 3, percent: 0.20 },
+      { stars: 2, percent: 0.05 },
+      { stars: 1, percent: 0.05 },
+    ],
     smartCancellation: true,
     departureTimeSlot: "18_24",
   },
@@ -153,6 +315,27 @@ const busList = [
     operator: "MR Travels",
     pickupPoint: "Kukatpally",
     droppingPoint: "Gachibowli",
+    route: ["Hyderabad", "Gachibowli"],
+    photos: [
+      "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&w=800&q=60",
+    ],
+    amenities: [
+      { icon: "cctv", label: "CCTV Tracking" },
+      { icon: "battery-charging", label: "Charging Point" },
+    ],
+    boardingPoints: [
+      { title: "Kukatpally", subtitle: "Opposite Mall" },
+    ],
+    droppingPoints: [
+      { title: "Gachibowli", subtitle: "DLF Building" },
+    ],
+    ratingDistribution: [
+      { stars: 5, percent: 0.45 },
+      { stars: 4, percent: 0.25 },
+      { stars: 3, percent: 0.15 },
+      { stars: 2, percent: 0.10 },
+      { stars: 1, percent: 0.05 },
+    ],
     smartCancellation: true,
     departureTimeSlot: "18_24",
   },
@@ -171,6 +354,27 @@ const busList = [
     operator: "BSR Travels",
     pickupPoint: "Kukatpally",
     droppingPoint: "Madhapur",
+    route: ["Hyderabad", "Madhapur"],
+    photos: [
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=60",
+    ],
+    amenities: [
+      { icon: "bed-outline", label: "Blanket & Pillow" },
+      { icon: "television-guide", label: "Entertainment" },
+    ],
+    boardingPoints: [
+      { title: "Kukatpally", subtitle: "Opposite Mall" },
+    ],
+    droppingPoints: [
+      { title: "Madhapur", subtitle: "Near Durgam Cheruvu" },
+    ],
+    ratingDistribution: [
+      { stars: 5, percent: 0.35 },
+      { stars: 4, percent: 0.30 },
+      { stars: 3, percent: 0.20 },
+      { stars: 2, percent: 0.10 },
+      { stars: 1, percent: 0.05 },
+    ],
     smartCancellation: true,
     departureTimeSlot: "18_24",
   },
@@ -189,6 +393,30 @@ const busList = [
     operator: "VRL Travels",
     pickupPoint: "Kukatpally",
     droppingPoint: "Hitech City",
+    route: ["Hyderabad", "Hitech City"],
+    photos: [
+      "https://images.unsplash.com/photo-1524678606370-a47ad25cb82a?auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=60",
+    ],
+    amenities: [
+      { icon: "bed-outline", label: "Blanket & Pillow" },
+      { icon: "wifi", label: "Wi-Fi" },
+      { icon: "battery-charging", label: "Charging Point" },
+    ],
+    boardingPoints: [
+      { title: "Kukatpally", subtitle: "Opposite Mall" },
+    ],
+    droppingPoints: [
+      { title: "Hitech City", subtitle: "Near Cyber Towers" },
+    ],
+    ratingDistribution: [
+      { stars: 5, percent: 0.55 },
+      { stars: 4, percent: 0.25 },
+      { stars: 3, percent: 0.10 },
+      { stars: 2, percent: 0.05 },
+      { stars: 1, percent: 0.05 },
+    ],
     smartCancellation: true,
     departureTimeSlot: "18_24",
   },
@@ -207,6 +435,27 @@ const busList = [
     operator: "RedBus Express",
     pickupPoint: "Kukatpally",
     droppingPoint: "Gachibowli",
+    route: ["Hyderabad", "Gachibowli"],
+    photos: [
+      "https://images.unsplash.com/photo-1524678606370-a47ad25cb82a?auto=format&fit=crop&w=800&q=60",
+    ],
+    amenities: [
+      { icon: "television-guide", label: "Entertainment" },
+      { icon: "cctv", label: "CCTV Tracking" },
+    ],
+    boardingPoints: [
+      { title: "Kukatpally", subtitle: "Opposite Mall" },
+    ],
+    droppingPoints: [
+      { title: "Gachibowli", subtitle: "DLF Building" },
+    ],
+    ratingDistribution: [
+      { stars: 5, percent: 0.40 },
+      { stars: 4, percent: 0.30 },
+      { stars: 3, percent: 0.20 },
+      { stars: 2, percent: 0.05 },
+      { stars: 1, percent: 0.05 },
+    ],
     smartCancellation: false,
     departureTimeSlot: "18_24",
   },
@@ -225,6 +474,28 @@ const busList = [
     operator: "Shree Travels",
     pickupPoint: "Kukatpally",
     droppingPoint: "Secunderabad",
+    route: ["Hyderabad", "Secunderabad"],
+    photos: [
+      "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=60",
+    ],
+    amenities: [
+      { icon: "bed-outline", label: "Blanket & Pillow" },
+      { icon: "wifi", label: "Wi-Fi" },
+    ],
+    boardingPoints: [
+      { title: "Kukatpally", subtitle: "Opposite Mall" },
+    ],
+    droppingPoints: [
+      { title: "Secunderabad", subtitle: "Railway Station" },
+    ],
+    ratingDistribution: [
+      { stars: 5, percent: 0.50 },
+      { stars: 4, percent: 0.30 },
+      { stars: 3, percent: 0.10 },
+      { stars: 2, percent: 0.05 },
+      { stars: 1, percent: 0.05 },
+    ],
     smartCancellation: true,
     departureTimeSlot: "18_24",
   },
@@ -470,7 +741,7 @@ export default function BusResultsScreen({ route }) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#ffffff' },
-  container: { flex: 1, paddingTop: 46,paddingHorizontal: 16 },
+  container: { flex: 1, paddingTop: 16,paddingHorizontal: 16 },
   header: { paddingVertical: 14, paddingHorizontal: 12, backgroundColor: '#fff' },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   backBtn: { padding: 6 },

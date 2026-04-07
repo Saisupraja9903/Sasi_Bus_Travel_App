@@ -11,7 +11,6 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   Animated,
-  Alert,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import {
@@ -20,6 +19,7 @@ import {
 } from "react-native-responsive-screen";
 
 import { IMAGES } from "../constants/images";
+import AppModal from "../components/AppModal";
 
 export default function OTPScreen() {
 
@@ -34,6 +34,8 @@ export default function OTPScreen() {
   const { phone } = route.params || {};
 
   const inputs = useRef([]);
+  
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     inputs.current[0]?.focus();
@@ -103,7 +105,7 @@ export default function OTPScreen() {
       return;
     }
 
-    Alert.alert("Invalid OTP", "Invalid OTP. Please try again.");
+    setModalVisible(true);
   };
 
   /* ---------------- HANDLE INPUT ---------------- */
@@ -285,6 +287,14 @@ export default function OTPScreen() {
         </Text>
 
       </Animated.View>
+      
+      <AppModal
+        visible={modalVisible}
+        title="Invalid OTP"
+        message="The OTP you entered is incorrect. Please try again."
+        type="error"
+        onConfirm={() => setModalVisible(false)}
+      />
 
     </KeyboardAvoidingView>
   );
@@ -361,7 +371,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 40,
     alignItems: "center",
     paddingTop: hp("4%"),
-    paddingBottom: hp("10%"),
+    paddingBottom: hp("20%"),
     paddingHorizontal: wp("8%"),
     marginTop: hp("1%"),
     shadowColor: "#000",

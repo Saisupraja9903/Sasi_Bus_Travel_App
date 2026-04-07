@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,16 +6,18 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   TextInput,
   Modal,
   FlatList,
   Dimensions,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { MaterialIcons, Ionicons, FontAwesome5 } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Footer from "../components/Footer";
 import { useFonts, Poppins_700Bold } from "@expo-google-fonts/poppins";
+import AppModal from "../components/AppModal";
 
 const HOME_IMAGES = {
   OFFER_1: require("../../assets/offer1.png"),
@@ -31,6 +33,22 @@ export default function HomeScreen({ navigation, route }) {
 
   const [fromLocation, setFromLocation] = useState("Hyderabad, Telangana");
   const [toLocation, setToLocation] = useState("Kakinada, Andhra pradesh");
+
+  const [modalVisible, setModalVisible] = useState(false);
+
+  // Profile Image State
+  const [profileImage, setProfileImage] = useState(null);
+
+  // Load profile image when screen focuses
+  useFocusEffect(
+    useCallback(() => {
+      const loadProfileImage = async () => {
+        const savedImage = await AsyncStorage.getItem("profileImage");
+        if (savedImage) setProfileImage(savedImage);
+      };
+      loadProfileImage();
+    }, [])
+  );
 
   // update location if returned from search
   useEffect(() => {
@@ -103,9 +121,16 @@ export default function HomeScreen({ navigation, route }) {
         {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.userSection}>
-            <View style={styles.profileCircle}>
-              <Ionicons name="person" size={22} color="#2F80ED" />
-            </View>
+            <TouchableOpacity 
+              style={styles.profileCircle}
+              onPress={() => navigation.navigate("Profile")}
+            >
+              {profileImage ? (
+                <Image source={{ uri: profileImage }} style={styles.profileImage} />
+              ) : (
+                <Ionicons name="person" size={22} color="#2F80ED" />
+              )}
+            </TouchableOpacity>
 
             <View>
               <Text style={styles.welcome}>Welcome,</Text>
@@ -285,7 +310,7 @@ export default function HomeScreen({ navigation, route }) {
                 style={styles.copyBtn}
                 onPress={() => {
                   Clipboard.setString("MARVAC13");
-                  Alert.alert("Copied to clipboard");
+                  setModalVisible(true);
                 }}
               >
                 <MaterialIcons name="content-copy" size={16} color="#2F80ED" />
@@ -307,7 +332,7 @@ export default function HomeScreen({ navigation, route }) {
                 style={styles.copyBtn}
                 onPress={() => {
                   Clipboard.setString("MARVAC13");
-                  Alert.alert("Copied to clipboard");
+                  setModalVisible(true);
                 }}
               >
                 <MaterialIcons name="content-copy" size={16} color="#2F80ED" />
@@ -331,7 +356,7 @@ export default function HomeScreen({ navigation, route }) {
                 style={styles.copyBtn}
                 onPress={() => {
                   Clipboard.setString("MYTHRI13");
-                  Alert.alert("Copied to clipboard");
+                  setModalVisible(true);
                 }}
               >
                 <MaterialIcons name="content-copy" size={16} color="#2F80ED" />
@@ -474,6 +499,14 @@ export default function HomeScreen({ navigation, route }) {
       </Modal>
 
       {/* FOOTER */}
+      <AppModal
+        visible={modalVisible}
+        title="Copied"
+        message="Coupon code copied to clipboard!"
+        type="success"
+        confirmText="OK"
+        onConfirm={() => setModalVisible(false)}
+      />
       <Footer />
     </View>
   );
@@ -742,6 +775,12 @@ const styles = StyleSheet.create({
 
     boxShadow: "0px 4px 6px rgba(0,0,0,0.25)",
     elevation: 8,
+  },
+
+  profileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
 
   profileIcon: {

@@ -4,14 +4,16 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Animated,
 } from "react-native";
 
 import Svg, { G, Path, Defs, ClipPath, Rect } from "react-native-svg";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import BusDetailsBottomSheet from "./BusDetailsBottomSheet";
 
 const STATUS = {
   AVAILABLE: "available",
@@ -291,7 +293,20 @@ const initialLayout = {
 
 export default function SeatSelectionScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const { bus, date } = route.params || {};
   const [selectedSeats, setSelectedSeats] = useState([]);
+  const insets = useSafeAreaInsets();
+
+  const buttonAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(buttonAnim, {
+      toValue: selectedSeats.length > 0 ? 1 : 0,
+      duration: 600, // Slow slide animation
+      useNativeDriver: true,
+    }).start();
+  }, [selectedSeats.length > 0]);
 
   const toggleSeat = (seat) => {
     setSelectedSeats((prev) =>
@@ -349,7 +364,7 @@ export default function SeatSelectionScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <MaterialIcons
           name="arrow-back"
@@ -388,9 +403,29 @@ export default function SeatSelectionScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.bottomWrapper}>
-        <View style={styles.bottomDivider} />
+      {/* BUS DETAILS BOTTOM SHEET */}
+      <BusDetailsBottomSheet bus={bus} />
 
+      {/* PROCEED BUTTON - Always visible */}
+      <Animated.View
+        pointerEvents={selectedSeats.length > 0 ? "auto" : "none"}
+        style={[
+          styles.bottomWrapperOverlay,
+          {
+            paddingBottom: Math.max(insets.bottom, 16),
+            opacity: buttonAnim,
+            transform: [
+              {
+                translateY: buttonAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [150, 0],
+                }),
+              },
+            ],
+          }
+        ]}
+      >
+        <View style={styles.bottomDivider} />
         <View style={styles.bottomContent}>
           <View>
             <Text style={styles.selectedLabel}>SELECTED SEATS</Text>
@@ -398,7 +433,6 @@ export default function SeatSelectionScreen() {
               {selectedSeats.length ? selectedSeats.join(", ") : "None"}
             </Text>
           </View>
-
           <TouchableOpacity
             style={[
               styles.proceedBtn,
@@ -406,21 +440,21 @@ export default function SeatSelectionScreen() {
             ]}
             disabled={selectedSeats.length === 0}
             onPress={() => {
-              console.log("Clicked Proceed"); // ✅ debug
-              navigation.navigate("BookingDetails");
-            }} // ✅ ADD THIS
+              navigation.navigate("BoardingDroppingScreen", {
+                selectedSeats,
+                bus,
+                date,
+              });
+            }}
           >
             <Text
-              style={[
-                styles.proceedText,
-                selectedSeats.length === 0 && styles.disabledText,
-              ]}
+              style={[styles.proceedText, selectedSeats.length === 0 && styles.disabledText]}
             >
               Proceed
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -436,7 +470,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 10,
   },
 
   title: {
@@ -445,7 +479,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  mapContainer: { paddingTop: 20 },
+  mapContainer: { paddingTop: 5 },
 
   mainWrapper: {
     flexDirection: "row",
@@ -541,6 +575,17 @@ const styles = StyleSheet.create({
   priceText: { fontSize: 11, marginTop: 6 },
   soldText: { fontSize: 11, marginTop: 6, color: "#999" },
 
+  bottomWrapperOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "white",
+    zIndex: 1000, // Very high to stay above sheet
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#EEE",
+  },
   lowerText: {
     marginTop: 2, // ✅ reduced from 6
   },

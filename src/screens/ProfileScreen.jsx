@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Modal,
   Image,
 } from "react-native";
 import {
@@ -16,12 +17,15 @@ import {
   Ionicons,
 } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import AppModal from "../components/AppModal";
 
 const menuItems = [
   {
     title: "Personal Details",
-    icon: "user",
-    lib: Feather,
+    icon: "person-outline",
+    lib: MaterialIcons,
     route: "PersonalDetails",
   },
   {
@@ -34,7 +38,7 @@ const menuItems = [
     title: "Refer & Earn",
     icon: "share-alt",
     lib: FontAwesome,
-    route: null,
+    route: "Refer",
   },
   {
     title: "Help",
@@ -44,9 +48,9 @@ const menuItems = [
   },
   {
     title: "Wallet",
-    icon: "wallet",
-    lib: AntDesign,
-    route: null,
+    icon: "account-balance-wallet",
+    lib: MaterialIcons,
+    route: "Wallet",
   },
   {
     title: "Delete Account",
@@ -60,7 +64,87 @@ const menuItems = [
 export default function ProfileScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { phone, name } = route.params || {};
+  const { phone, name, passengers } = route.params || {};
+  const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deletionDate, setDeletionDate] = useState('');
+  const [profileImage, setProfileImage] = useState(null);
+
+  // Modal States
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({ title: "", message: "", type: "info" });
+  const [imagePickerVisible, setImagePickerVisible] = useState(false);
+
+  useEffect(() => {
+    loadProfileImage();
+  }, []);
+
+  const loadProfileImage = async () => {
+    const savedImage = await AsyncStorage.getItem("profileImage");
+    if (savedImage) {
+      setProfileImage(savedImage);
+    }
+  };
+
+  const handleProfileImage = () => {
+    setImagePickerVisible(true);
+  };
+
+  const openGallery = async () => {
+    setImagePickerVisible(false);
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.status !== "granted") {
+      showAlert("Permission Denied", "Gallery access is required to select photos!", "error");
+      return;
+    }
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+    if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
+      const selectedUri = pickerResult.assets[0].uri;
+      setProfileImage(selectedUri);
+      await AsyncStorage.setItem("profileImage", selectedUri);
+    }
+  };
+
+  const openCamera = async () => {
+    setImagePickerVisible(false);
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    if (permissionResult.status !== "granted") {
+      showAlert("Permission Denied", "Camera access is required to take photos!", "error");
+      return;
+    }
+    const cameraResult = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+    if (!cameraResult.canceled && cameraResult.assets && cameraResult.assets.length > 0) {
+      const capturedUri = cameraResult.assets[0].uri;
+      setProfileImage(capturedUri);
+      await AsyncStorage.setItem("profileImage", capturedUri);
+    }
+  };
+
+  const showAlert = (title, message, type = "info") => {
+    setAlertConfig({ title, message, type });
+    setAlertVisible(true);
+  };
+
+  const openDeleteModal = () => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 30); // Account will be deleted in 30 days
+    const formattedDate = futureDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    setDeletionDate(formattedDate);
+    showAlert("Delete Account", `Are you sure you want to delete your account? This action is irreversible. Your account will be permanently deleted on ${formattedDate}.`, "error");
+  };
 
   return (
     <View style={styles.container}>
@@ -87,8 +171,15 @@ export default function ProfileScreen() {
         <View style={styles.profileCard}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatarPlaceholder}>
-              <MaterialIcons name="person" size={45} color="#2F80ED" />
+              {profileImage ? (
+                <Image source={{ uri: profileImage }} style={styles.avatarImage} />
+              ) : (
+                <MaterialIcons name="person" size={45} color="#2F80ED" />
+              )}
             </View>
+            <TouchableOpacity style={styles.editIconBtn} onPress={handleProfileImage}>
+              <MaterialIcons name="edit" size={14} color="#fff" />
+            </TouchableOpacity>
           </View>
 
           <Text style={styles.username}>{name || "User Name"}</Text>
@@ -104,7 +195,13 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 key={index}
                 style={styles.menuItem}
-                onPress={() => item.route && navigation.navigate(item.route, { phone, name: name || "User Name" })}
+                onPress={() => {
+                  if (item.isDanger) {
+                    openDeleteModal();
+                  } else if (item.route) {
+                    navigation.navigate(item.route, { phone, name: name || "User Name", passengers });
+                  }
+                }}
                 activeOpacity={0.7}
               >
                 <View
@@ -149,6 +246,58 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* APP MODAL (Handles Delete Confirmation & Errors) */}
+      <AppModal
+        visible={alertVisible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        showCancel={alertConfig.title === "Delete Account"}
+        cancelText="Cancel"
+        confirmText={alertConfig.title === "Delete Account" ? "Delete" : "OK"}
+        onCancel={() => setAlertVisible(false)}
+        onConfirm={() => {
+          setAlertVisible(false);
+          if (alertConfig.title === "Delete Account") {
+            navigation.navigate("Login");
+          }
+        }}
+      />
+
+      {/* IMAGE PICKER MODAL */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={imagePickerVisible}
+        onRequestClose={() => setImagePickerVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.pickerContent}>
+            <Text style={styles.pickerTitle}>Profile Photo</Text>
+            
+            <TouchableOpacity style={styles.pickerOption} onPress={openCamera}>
+              <View style={styles.pickerIcon}>
+                <MaterialIcons name="camera-alt" size={24} color="#2F80ED" />
+              </View>
+              <Text style={styles.pickerText}>Take Photo</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.pickerOption} onPress={openGallery}>
+              <View style={styles.pickerIcon}>
+                <MaterialIcons name="photo-library" size={24} color="#2F80ED" />
+              </View>
+              <Text style={styles.pickerText}>Choose from Gallery</Text>
+            </TouchableOpacity>
+
+            <View style={styles.divider}/>
+
+            <TouchableOpacity style={styles.pickerCancel} onPress={() => setImagePickerVisible(false)}>
+              <Text style={styles.pickerCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -208,6 +357,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#EBF3FF",
     justifyContent: "center",
     alignItems: "center",
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   editIconBtn: {
     position: "absolute",
@@ -297,4 +451,20 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginLeft: 10,
   },
+  /* MODAL STYLES */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  pickerContent: { width: "100%", backgroundColor: "#fff", borderRadius: 24, padding: 24, elevation: 10 },
+  pickerTitle: { fontSize: 18, fontWeight: "700", marginBottom: 20, textAlign: "center", color: "#333" },
+  pickerOption: { flexDirection: "row", alignItems: "center", paddingVertical: 12 },
+  pickerIcon: { width: 40, alignItems: "center", marginRight: 10 },
+  pickerText: { fontSize: 16, color: "#333" },
+  divider: { height: 1, backgroundColor: "#EEE", marginVertical: 10 },
+  pickerCancel: { alignItems: "center", paddingVertical: 10 },
+  pickerCancelText: { fontSize: 16, color: "#D32F2F", fontWeight: "600" },
 });

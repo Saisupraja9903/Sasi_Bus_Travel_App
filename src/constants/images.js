@@ -16,5 +16,9 @@ export const IMAGES = {
   OFFER8: require("../../assets/offers/offer2.png"),
   OFFER9: require("../../assets/offers/offer3.png"),
   OFFER10: require("../../assets/offers/offer4.png"),
-
+  REFER: require("../../assets/refer.png"),
+  WALLET: require("../../assets/wallet.png"),
+  WALLET_EMPTY: require("../../assets/wallet1.png"),
+  BUS1: require("../../assets/bus1.png"),
+  BUS2: require("../../assets/bus2.png"),
 };

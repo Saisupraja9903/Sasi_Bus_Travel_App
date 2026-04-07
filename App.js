@@ -1,5 +1,7 @@
+import 'react-native-gesture-handler';
 import React from "react";
 import { Text } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { NavigationContainer } from "@react-navigation/native";
@@ -23,6 +25,12 @@ import FAQListScreen from "./src/screens/FAQListScreen";
 import FAQAnswerScreen from "./src/screens/FAQAnswerScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import PersonalDetailsScreen from "./src/components/PersonalDetailsScreen";
+import ReferScreen from "./src/components/ReferScreen";
+import WalletScreen from "./src/components/WalletScreen";
+import BoardingScreen from "./src/components/BoardingScreen";
+import PassengerInfoScreen from "./src/components/PassengerInfoScreen";
+
+import BusDetailsBottomSheet from "./src/components/BusDetailsBottomSheet";
 
 Text.defaultProps = Text.defaultProps || {};
 Text.defaultProps.allowFontScaling = false;
@@ -31,6 +39,7 @@ const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <NavigationContainer>
 
@@ -89,6 +98,16 @@ export default function App() {
           />
 
           <Stack.Screen
+            name="BoardingDroppingScreen"
+            component={BoardingScreen}
+          />
+
+          <Stack.Screen
+            name="PassengerDetailsScreen"
+            component={PassengerInfoScreen}
+          />
+
+          <Stack.Screen
             name="BookingDetails"
             component={BookingDetailsScreen}
           />
@@ -133,9 +152,26 @@ export default function App() {
             component={PersonalDetailsScreen}
           />
 
+          <Stack.Screen
+            name="Refer"
+            component={ReferScreen}
+          />
+
+          <Stack.Screen
+            name="Wallet"
+            component={WalletScreen}
+          />
+
+
+          <Stack.Screen
+            name="BusDetailsBottomSheet"
+            component={BusDetailsBottomSheet}
+          />
+
         </Stack.Navigator>
 
       </NavigationContainer>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

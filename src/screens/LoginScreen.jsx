@@ -246,6 +246,7 @@ const styles = StyleSheet.create({
   },
   code: {
     marginRight: 8,
+    fontSize: wp("4%"),
     fontWeight: "600",
     color: "#000",
   },

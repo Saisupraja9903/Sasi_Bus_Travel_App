@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -7,9 +7,10 @@ import {
   ScrollView,
 } from "react-native";
 
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import BusDetailsBottomSheet from "./BusDetailsBottomSheet";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
@@ -192,7 +193,10 @@ function Seat({ seat, selected, onPress }) {
 
 export default function SeatSelectionScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const { bus, date } = route.params || {};
   const [selectedSeats, setSelectedSeats] = useState([]);
+  const insets = useSafeAreaInsets();
 
   const toggleSeat = (seat) => {
     setSelectedSeats((prev) =>
@@ -256,7 +260,7 @@ export default function SeatSelectionScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={["bottom"]}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <MaterialIcons
           name="arrow-back"
@@ -295,9 +299,15 @@ export default function SeatSelectionScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.bottomWrapper}>
-        <View style={styles.divider} />
+      {/* BUS DETAILS BOTTOM SHEET */}
+      <BusDetailsBottomSheet bus={bus} />
 
+      {/* PROCEED BUTTON - Always visible */}
+      <View style={[
+        styles.bottomWrapperOverlay, 
+        { paddingBottom: Math.max(insets.bottom, 20) }
+      ]}>
+        <View style={styles.divider} />
         <View style={styles.bottomContent}>
           <View>
             <Text style={styles.selectedLabel}>SELECTED SEATS</Text>
@@ -305,11 +315,10 @@ export default function SeatSelectionScreen() {
               {selectedSeats.length ? selectedSeats.join(", ") : "None"}
             </Text>
           </View>
-
           <TouchableOpacity
             style={[styles.proceedBtn, selectedSeats.length === 0 && styles.proceedBtnDisabled]}
             disabled={selectedSeats.length === 0}
-            onPress={() => navigation.navigate("BookingDetails")}
+            onPress={() => navigation.navigate("BoardingDroppingScreen", { selectedSeats, bus, date })}
           >
             <Text style={styles.proceedText}>Proceed</Text>
           </TouchableOpacity>
@@ -322,20 +331,18 @@ export default function SeatSelectionScreen() {
 /* -------------------------------------- */
 /* Styles                                 */
 /* -------------------------------------- */
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "white",
-    paddingTop: 30,
+    paddingTop: 5,
   },
 
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 48,
-    paddingBottom: 36,
-    marginLeft: -20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   bottomIndicator: {
     position: "absolute",
@@ -457,6 +464,18 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
+  bottomWrapperOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "white",
+    zIndex: 1000, 
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#EEE",
+  },
   bottomWrapper: {
     backgroundColor: "white",
     paddingHorizontal: 16,
