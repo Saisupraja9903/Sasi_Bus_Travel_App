@@ -140,11 +140,12 @@ const BusDetailsBottomSheet = forwardRef((props, ref) => {
   const scrollOffset = useRef(0);
 
   const navigateToAllPoints = (tab) => {
-    navigation.navigate("BoardingDroppingPoints", {
+    navigation.navigate("BoardingDroppingScreen", {
       initialTab: tab,
       boardingPoints: bus?.boardingPoints || boardingPoints,
       droppingPoints: bus?.droppingPoints || droppingPoints,
-      busName: bus?.name || "Bus Details",
+      bus,
+      selectedSeats: [],
     });
   };
 

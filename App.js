@@ -25,8 +25,12 @@ import ProfileScreen from "./src/screens/ProfileScreen";
 import PersonalDetailsScreen from "./src/components/PersonalDetailsScreen";
 import ReferScreen from "./src/components/ReferScreen";
 import WalletScreen from "./src/components/WalletScreen";
-import BoardingScreen from "./src/components/BoardingScreen";
+import BoardingDroppingScreen from "./src/components/BoardingDroppingScreen";
 import PassengerInfoScreen from "./src/components/PassengerInfoScreen";
+import PaymentScreen from "./src/components/PaymentScreen";
+import CardPaymentScreen from "./src/components/CardPaymentScreen";
+import NetBankingScreen from "./src/components/NetBankingScreen";
+import SuccessScreen from "./src/components/SuccessScreen";
 import ReviewsScreen from "./src/components/ReviewsScreen";
 import StudentCorpRewardScreen from "./src/components/StudentCorpRewardScreen";
 import StudentCorpOtpScreen from "./src/components/StudentCorpOtpScreen";
@@ -100,12 +104,33 @@ export default function App() {
 
           <Stack.Screen
             name="BoardingDroppingScreen"
-            component={BoardingScreen}
+            component={BoardingDroppingScreen}
+            options={{ animation: "slide_from_right" }}
           />
 
           <Stack.Screen
             name="PassengerDetailsScreen"
             component={PassengerInfoScreen}
+          />
+
+          <Stack.Screen
+            name="PaymentScreen"
+            component={PaymentScreen}
+          />
+
+          <Stack.Screen
+            name="CardPaymentScreen"
+            component={CardPaymentScreen}
+          />
+
+          <Stack.Screen
+            name="NetBankingScreen"
+            component={NetBankingScreen}
+          />
+
+          <Stack.Screen
+            name="SuccessScreen"
+            component={SuccessScreen}
           />
 
           <Stack.Screen

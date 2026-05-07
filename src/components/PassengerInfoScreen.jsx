@@ -282,7 +282,13 @@ export default function PassengerInfoScreen({ navigation }) {
     // Simulate final booking verification API call
     setTimeout(() => {
       setIsLoading(false);
-      // navigation.navigate("PaymentScreen", { ...params });
+      navigation.navigate("PaymentScreen", {
+        totalAmount: pricing.totalPaid,
+        bus,
+        selectedSeats,
+        boardingPoint,
+        droppingPoint,
+      });
     }, 1500);
   };
 
@@ -765,7 +771,7 @@ export default function PassengerInfoScreen({ navigation }) {
           <FareRow label="Total Amount" value={pricing.totalPaid} isTotal={true} />
         </View>
 
-        <View style={{ height: 80 }} />
+        <View style={{ height:30 }} />
       </ScrollView>
 
       {/* BOTTOM BAR */}

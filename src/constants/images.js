@@ -24,6 +24,14 @@ export const IMAGES = {
   STUDENT: require("../../assets/Student.png"),
   NO_BOOKING: require("../../assets/no-booking.png"),
   OTP: require("../../assets/otp2.png"),
+  PHONEPAY: require("../../assets/Bank/Ppay.png"),
+  GOOGLEPAY: require("../../assets/Bank/GPay.png"),
+  AMAZONPAY: require("../../assets/Bank/Apay.png"),
+  CANARA: require("../../assets/Bank/Canara.png"),
+  ICICI: require("../../assets/Bank/ICICI.png"),
+  SBI: require("../../assets/Bank/SBI.png"),
+  MOBIKWIK: require("../../assets/Bank/Mobikwik.png"),
+  PAYTM: require("../../assets/Bank/Paytm.png"),
 };
 
 export default IMAGES;
