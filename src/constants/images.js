@@ -21,4 +21,9 @@ export const IMAGES = {
   WALLET_EMPTY: require("../../assets/wallet1.png"),
   BUS1: require("../../assets/bus1.png"),
   BUS2: require("../../assets/bus2.png"),
+  STUDENT: require("../../assets/Student.png"),
+  NO_BOOKING: require("../../assets/no-booking.png"),
+  OTP: require("../../assets/otp2.png"),
 };
+
+export default IMAGES;

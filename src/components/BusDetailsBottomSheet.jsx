@@ -205,8 +205,9 @@ const BusDetailsBottomSheet = forwardRef((props, ref) => {
     Animated.spring(translateY, {
       toValue,
       useNativeDriver: true,
-      friction: 8,
-      tension: 40,
+      damping: 20,
+      mass: 0.8,
+      stiffness: 120,
     }).start();
   };
 
@@ -238,9 +239,9 @@ const BusDetailsBottomSheet = forwardRef((props, ref) => {
         let target = SNAP_BOTTOM;
 
         // Logic for snapping
-        if (vy < -0.5 || (dy < -100 && currentPos < SNAP_BOTTOM)) {
+        if (vy < -0.2 || (dy < -60 && currentPos < SNAP_BOTTOM)) {
           target = SNAP_TOP;
-        } else if (vy > 0.5 || dy > 100) {
+        } else if (vy > 0.2 || dy > 60) {
           target = SNAP_BOTTOM;
         } else {
           // Snap to nearest point
@@ -249,7 +250,7 @@ const BusDetailsBottomSheet = forwardRef((props, ref) => {
           target = distTop < distBottom ? SNAP_TOP : SNAP_BOTTOM;
         }
 
-        openSheet(target);
+        openSheet(target === SNAP_CLOSED ? SNAP_BOTTOM : target);
       },
     }),
   ).current;
@@ -383,6 +384,7 @@ const BusDetailsBottomSheet = forwardRef((props, ref) => {
         onScroll={handleScroll}
         scrollEventThrottle={8}
         bounces={false}
+        showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[2]} // Sticky Tab Bar
       >
         {/* Bus Images Carousel */}
@@ -652,7 +654,14 @@ const BusDetailsBottomSheet = forwardRef((props, ref) => {
                 </View>
               ))}
             </View>
-            <TouchableOpacity style={styles.readReviewsBtn}>
+            <TouchableOpacity
+              style={styles.readReviewsBtn}
+              onPress={() =>
+                navigation.navigate("Reviews", {
+                  busName: bus?.name || "Bus Details",
+                })
+              }
+            >
               <Text style={styles.readReviewsText}>Read all 188 reviews</Text>
             </TouchableOpacity>
           </View>

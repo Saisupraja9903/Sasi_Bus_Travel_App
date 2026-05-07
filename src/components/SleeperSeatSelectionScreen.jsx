@@ -1,20 +1,33 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Animated,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from "react-native";
 
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import BusDetailsBottomSheet from "./BusDetailsBottomSheet";
+import AppModal from "./AppModal";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
+
+// Enable LayoutAnimation for Android
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const STATUS = {
   AVAILABLE: "available",
@@ -134,6 +147,16 @@ const initialLayout = {
 
 function Seat({ seat, selected, onPress }) {
   const isSold = seat.status === STATUS.SOLD;
+  const bounceAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.spring(bounceAnim, {
+      toValue: selected ? 1.08 : 1,
+      friction: 4,
+      tension: 100,
+      useNativeDriver: true,
+    }).start();
+  }, [selected]);
 
   let borderColor = "#43A047";
   let lineColor = "#4CAF50";
@@ -154,7 +177,9 @@ function Seat({ seat, selected, onPress }) {
   }
 
   return (
-    <View style={styles.seatWrapper}>
+    <Animated.View
+      style={[styles.seatWrapper, { transform: [{ scale: bounceAnim }] }]}
+    >
       <TouchableOpacity
         style={[
           styles.seat,
@@ -166,14 +191,18 @@ function Seat({ seat, selected, onPress }) {
         onPress={() => !isSold && onPress(seat)}
       >
         {seat.gender === GENDER.MALE && (
-          <MaterialCommunityIcons name="human-male" size={40} color="#2196F3" />
+          <MaterialCommunityIcons 
+            name="human-male" 
+            size={40} 
+            color={selected ? "#2F80ED" : "#2196F3"} 
+          />
         )}
 
         {seat.gender === GENDER.FEMALE && (
           <MaterialCommunityIcons
             name="human-female"
             size={40}
-            color="#E82DAD"
+            color={selected ? "#2F80ED" : "#E82DAD"}
           />
         )}
 
@@ -187,23 +216,49 @@ function Seat({ seat, selected, onPress }) {
       ) : (
         seat.price && <Text style={styles.priceText}>₹ {seat.price}</Text>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
 export default function SeatSelectionScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { bus, date } = route.params || {};
-  const [selectedSeats, setSelectedSeats] = useState([]);
+  const { bus, date, preSelectedSeatId } = route.params || {};
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [selectedSeats, setSelectedSeats] = useState(preSelectedSeatId ? [preSelectedSeatId] : []);
   const insets = useSafeAreaInsets();
 
+  const buttonAnim = useRef(new Animated.Value(0)).current;
+
+  const totalPrice = useMemo(() => {
+    const all = [...initialLayout.lower.flat(), ...initialLayout.upper.flat()];
+    return selectedSeats.reduce((acc, id) => {
+      const seat = all.find((s) => s.id === id);
+      return acc + (seat?.price || 0);
+    }, 0);
+  }, [selectedSeats]);
+
+  useEffect(() => {
+    Animated.spring(buttonAnim, {
+      toValue: selectedSeats.length > 0 ? 1 : 0,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 40,
+    }).start();
+  }, [selectedSeats.length > 0]);
+
   const toggleSeat = (seat) => {
-    setSelectedSeats((prev) =>
-      prev.includes(seat.id)
-        ? prev.filter((s) => s !== seat.id)
-        : [...prev, seat.id],
-    );
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSelectedSeats((prev) => {
+      if (prev.includes(seat.id)) {
+        return prev.filter((s) => s !== seat.id);
+      }
+      if (prev.length >= 6) {
+        setShowLimitModal(true);
+        return prev;
+      }
+      return [...prev, seat.id];
+    });
   };
 
   const renderSection = (title, rows) => (
@@ -292,7 +347,10 @@ export default function SeatSelectionScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.mapContainer}>
+      <ScrollView 
+        contentContainerStyle={styles.mapContainer}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.layoutRow}>
           {renderSection("LOWER", initialLayout.lower)}
           {renderSection("UPPER", initialLayout.upper)}
@@ -302,17 +360,32 @@ export default function SeatSelectionScreen() {
       {/* BUS DETAILS BOTTOM SHEET */}
       <BusDetailsBottomSheet bus={bus} />
 
-      {/* PROCEED BUTTON - Always visible */}
-      <View style={[
-        styles.bottomWrapperOverlay, 
-        { paddingBottom: Math.max(insets.bottom, 20) }
-      ]}>
+      {/* PROCEED BUTTON - Animated Slide Up */}
+      <Animated.View 
+        pointerEvents={selectedSeats.length > 0 ? "auto" : "none"}
+        style={[
+          styles.bottomWrapperOverlay, 
+          { 
+            paddingBottom: Math.max(insets.bottom, 20),
+            opacity: buttonAnim,
+            transform: [
+              {
+                translateY: buttonAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [100, 0],
+                }),
+              },
+            ],
+          }
+        ]}
+      >
         <View style={styles.divider} />
         <View style={styles.bottomContent}>
           <View>
-            <Text style={styles.selectedLabel}>SELECTED SEATS</Text>
+            <Text style={styles.selectedLabel}>{selectedSeats.join(", ")}</Text>
             <Text style={styles.selectedSeats}>
-              {selectedSeats.length ? selectedSeats.join(", ") : "None"}
+              <Text style={styles.totalHighlight}>Total: ₹</Text>
+              {totalPrice}
             </Text>
           </View>
           <TouchableOpacity
@@ -323,7 +396,15 @@ export default function SeatSelectionScreen() {
             <Text style={styles.proceedText}>Proceed</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </Animated.View>
+
+      <AppModal
+        visible={showLimitModal}
+        title="Seat Limit Reached"
+        message="For safety and convenience, you can only select a maximum of 6 seats per booking."
+        type="error"
+        onConfirm={() => setShowLimitModal(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -369,15 +450,15 @@ const styles = StyleSheet.create({
   },
 
   mapContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: wp("4%"),
     paddingTop: 11,
-    paddingBottom: 20,
+    paddingBottom: hp("42%"), // Dynamic padding to scroll past bottom sheet + proceed button
   },
 
   layoutRow: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 20,
+    gap: wp("5%"), // Flexible spacing between Lower and Upper sections
   },
   sectionHeader: {
     flexDirection: "row",
@@ -403,11 +484,15 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    width: 160,
+    width: wp("43.5%"), // Proportional width for consistency
     backgroundColor: "#fff",
     borderRadius: 20,
-    padding: 14,
+    padding: wp("3.5%"),
     elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
 
   sectionTitle: {
@@ -424,18 +509,18 @@ const styles = StyleSheet.create({
   doubleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    width: 90,
-    gap: 10,
+    width: wp("26%"), // Responsive width for double seat blocks
+    gap: wp("2%"),
   },
 
   seatWrapper: {
     alignItems: "center",
-    marginBottom: hp("2.5%"),
+    marginBottom: 15, // Changed from hp to fixed to stop compression
   },
 
   seat: {
-    width: 37,
-    height: hp("6.5%"),
+    width: wp("10.5%"),
+    height: wp("24%"), // Long rectangular ratio for sleeper comfort
     borderWidth: 1.0,
     borderRadius: 8,
     alignItems: "center",
@@ -455,13 +540,19 @@ const styles = StyleSheet.create({
 
   selectedSeat: {
     borderColor: "#2F80ED",
+    borderWidth: 2.5,
+    elevation: 8,
+    shadowColor: "#2F80ED",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
 
   priceText: {
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 6,
     color: "#333",
-    fontWeight: "500",
+    fontWeight: "700",
   },
 
   bottomWrapperOverlay: {
@@ -496,21 +587,24 @@ const styles = StyleSheet.create({
   },
 
   selectedLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#777",
-    fontWeight: "600",
+    fontWeight: "700",
     letterSpacing: 1,
   },
 
   selectedSeats: {
-    fontSize: 14,
+    fontSize: 18,
     marginTop: 4,
-    fontWeight: "500",
+    fontWeight: "700",
+  },
+  totalHighlight: {
+    color: "#2F80ED",
   },
 
   proceedBtn: {
     backgroundColor: "#2F80ED",
-    paddingVertical: 14,
+    paddingVertical: 18,
     paddingHorizontal: 40,
     borderRadius: 12,
   },
@@ -522,7 +616,7 @@ const styles = StyleSheet.create({
   proceedText: {
     color: "#fff",
     fontWeight: "600",
-    fontSize: 14,
+    fontSize: 16,
   },
   legendContainer: {
     flexDirection: "row",

@@ -5,15 +5,27 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from "react-native";
 
 import Svg, { G, Path, Defs, ClipPath, Rect } from "react-native-svg";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import BusDetailsBottomSheet from "./BusDetailsBottomSheet";
+import AppModal from "./AppModal";
+
+// Enable LayoutAnimation for Android
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const STATUS = {
   AVAILABLE: "available",
@@ -68,19 +80,31 @@ function SeatSvg({ color = "#325DE9", opacity = 1 }) {
 
 function Seat({ seat, selected, onPress, isLowerDouble }) {
   const isSold = seat.status === STATUS.SOLD;
+  const bounceAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.spring(bounceAnim, {
+      toValue: selected ? 1.1 : 1,
+      friction: 4,
+      tension: 100,
+      useNativeDriver: true,
+    }).start();
+  }, [selected]);
 
   /* 👉 IMAGE ONLY FOR LOWER DOUBLE */
   if (isLowerDouble) {
     return (
-      <View
+      <Animated.View
         style={[
           styles.seatWrapper,
-          isLowerDouble && styles.lowerDoubleWrapper, // ✅ added
+          isLowerDouble && styles.lowerDoubleWrapper,
+          { transform: [{ scale: bounceAnim }] },
         ]}
       >
         <TouchableOpacity
           activeOpacity={isSold ? 1 : 0.7}
           onPress={() => !isSold && onPress(seat)}
+          style={[selected && styles.selectedSeatImage]}
         >
           <SeatSvg
             color={
@@ -117,7 +141,7 @@ function Seat({ seat, selected, onPress, isLowerDouble }) {
             ₹ {seat.price}
           </Text>
         )}
-      </View>
+      </Animated.View>
     );
   }
 
@@ -142,7 +166,9 @@ function Seat({ seat, selected, onPress, isLowerDouble }) {
   }
 
   return (
-    <View style={styles.seatWrapper}>
+    <Animated.View
+      style={[styles.seatWrapper, { transform: [{ scale: bounceAnim }] }]}
+    >
       <TouchableOpacity
         style={[
           styles.seat,
@@ -166,14 +192,16 @@ function Seat({ seat, selected, onPress, isLowerDouble }) {
           <MaterialCommunityIcons
             name="human-female"
             size={36}
-            color={selected ? "#D81B60" : "#E82DAD"}
+            color={selected ? "#2F80ED" : "#E82DAD"}
             style={{ marginTop: 6 }} // ✅ center fix
           />
         )}
 
-        <View style={[styles.bottomIndicator, { backgroundColor: lineColor }]}>
-          <View style={styles.innerLine} />
-        </View>
+        {!selected && (
+          <View style={[styles.bottomIndicator, { backgroundColor: lineColor }]}>
+            <View style={styles.innerLine} />
+          </View>
+        )}
       </TouchableOpacity>
 
       {isSold ? (
@@ -181,7 +209,7 @@ function Seat({ seat, selected, onPress, isLowerDouble }) {
       ) : (
         <Text style={styles.priceText}>₹ {seat.price}</Text>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -294,11 +322,20 @@ const initialLayout = {
 export default function SeatSelectionScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { bus, date } = route.params || {};
-  const [selectedSeats, setSelectedSeats] = useState([]);
+  const { bus, date, preSelectedSeatId } = route.params || {};
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [selectedSeats, setSelectedSeats] = useState(preSelectedSeatId ? [preSelectedSeatId] : []);
   const insets = useSafeAreaInsets();
 
   const buttonAnim = useRef(new Animated.Value(0)).current;
+
+  const totalPrice = useMemo(() => {
+    const all = [...initialLayout.lower.flat(), ...initialLayout.upper.flat()];
+    return selectedSeats.reduce((acc, id) => {
+      const seat = all.find((s) => s.id === id);
+      return acc + (seat?.price || 0);
+    }, 0);
+  }, [selectedSeats]);
 
   useEffect(() => {
     Animated.timing(buttonAnim, {
@@ -309,11 +346,17 @@ export default function SeatSelectionScreen() {
   }, [selectedSeats.length > 0]);
 
   const toggleSeat = (seat) => {
-    setSelectedSeats((prev) =>
-      prev.includes(seat.id)
-        ? prev.filter((s) => s !== seat.id)
-        : [...prev, seat.id],
-    );
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSelectedSeats((prev) => {
+      if (prev.includes(seat.id)) {
+        return prev.filter((s) => s !== seat.id);
+      }
+      if (prev.length >= 6) {
+        setShowLimitModal(true);
+        return prev;
+      }
+      return [...prev, seat.id];
+    });
   };
 
   const renderSection = (title, rows) => (
@@ -428,9 +471,10 @@ export default function SeatSelectionScreen() {
         <View style={styles.bottomDivider} />
         <View style={styles.bottomContent}>
           <View>
-            <Text style={styles.selectedLabel}>SELECTED SEATS</Text>
+            <Text style={styles.selectedLabel}>{selectedSeats.join(", ")}</Text>
             <Text style={styles.selectedSeats}>
-              {selectedSeats.length ? selectedSeats.join(", ") : "None"}
+              <Text style={styles.totalHighlight}>Total: ₹</Text>
+              {totalPrice}
             </Text>
           </View>
           <TouchableOpacity
@@ -455,6 +499,14 @@ export default function SeatSelectionScreen() {
           </TouchableOpacity>
         </View>
       </Animated.View>
+
+      <AppModal
+        visible={showLimitModal}
+        title="Seat Limit Reached"
+        message="For safety and convenience, you can only select a maximum of 6 seats per booking."
+        type="error"
+        onConfirm={() => setShowLimitModal(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -546,7 +598,9 @@ const styles = StyleSheet.create({
   },
 
   selectedSeatImage: {
-    transform: [{ scale: 1.08 }], // 🔥 smooth highlight
+    borderColor: "#2F80ED",
+    borderWidth: 2,
+    borderRadius: 8,
   },
   seat: {
     width: 37,
@@ -558,6 +612,11 @@ const styles = StyleSheet.create({
   },
 
   soldSeat: { backgroundColor: "#EAEAEA" },
+
+  selectedSeat: {
+    borderColor: "#2F80ED",
+    borderWidth: 2.5,
+  },
 
   bottomIndicator: {
     position: "absolute",
@@ -572,8 +631,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
-  priceText: { fontSize: 11, marginTop: 6 },
-  soldText: { fontSize: 11, marginTop: 6, color: "#999" },
+  priceText: { fontSize: 12, marginTop: 6, fontWeight: "700", color: "#222" },
+  soldText: { fontSize: 12, marginTop: 6, color: "#999" },
 
   bottomWrapperOverlay: {
     position: 'absolute',
@@ -605,18 +664,23 @@ const styles = StyleSheet.create({
   },
 
   selectedLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#777",
+    fontWeight: "700",
   },
 
   selectedSeats: {
-    fontSize: 14,
+    fontSize: 18,
     marginTop: 4,
+    fontWeight: "700",
+  },
+  totalHighlight: {
+    color: "#2F80ED",
   },
 
   proceedBtn: {
     backgroundColor: "#2F80ED",
-    paddingVertical: 14,
+    paddingVertical: 18,
     paddingHorizontal: 40,
     borderRadius: 12,
   },
@@ -624,6 +688,7 @@ const styles = StyleSheet.create({
   proceedText: {
     color: "#fff",
     fontWeight: "600",
+    fontSize: 16,
   },
   disabledBtn: {
     backgroundColor: "#CFCFCF", // gray color

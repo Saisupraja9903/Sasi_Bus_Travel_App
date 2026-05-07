@@ -7,6 +7,8 @@ import {
   ScrollView,
   Modal,
   Image,
+  Vibration,
+  Platform,
 } from "react-native";
 import {
   MaterialIcons,
@@ -44,7 +46,7 @@ const menuItems = [
     title: "Help",
     icon: "help-outline",
     lib: MaterialIcons,
-    route: "Help",
+    route: "ChatBot",
   },
   {
     title: "Wallet",
@@ -196,10 +198,20 @@ export default function ProfileScreen() {
                 key={index}
                 style={styles.menuItem}
                 onPress={() => {
+                  // Production-level micro-interaction: Subtle haptic feedback
+                  if (Platform.OS !== 'web') Vibration.vibrate(10);
+
                   if (item.isDanger) {
                     openDeleteModal();
                   } else if (item.route) {
-                    navigation.navigate(item.route, { phone, name: name || "User Name", passengers });
+                    // Passing standardized context for a seamless AI Support experience
+                    navigation.navigate(item.route, { 
+                      phone, 
+                      mobile: phone,
+                      name: name || "User Name", 
+                      user: { name, phone },
+                      passengers 
+                    });
                   }
                 }}
                 activeOpacity={0.7}
@@ -245,6 +257,12 @@ export default function ProfileScreen() {
           <MaterialIcons name="logout" size={20} color="#fff" />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
+
+        {/* VERSION INFO */}
+        <View style={styles.versionContainer}>
+          <Text style={styles.versionText}>Version 1.0.4 (Production)</Text>
+          <Text style={styles.copyrightText}>© 2024 SasiBus Travels. All rights reserved.</Text>
+        </View>
       </ScrollView>
 
       {/* APP MODAL (Handles Delete Confirmation & Errors) */}
@@ -467,4 +485,19 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: "#EEE", marginVertical: 10 },
   pickerCancel: { alignItems: "center", paddingVertical: 10 },
   pickerCancelText: { fontSize: 16, color: "#D32F2F", fontWeight: "600" },
+  versionContainer: {
+    alignItems: "center",
+    marginTop: 30,
+    marginBottom: 20,
+  },
+  versionText: {
+    fontSize: 12,
+    color: "#999",
+    fontWeight: "600",
+  },
+  copyrightText: {
+    fontSize: 10,
+    color: "#BBB",
+    marginTop: 4,
+  },
 });

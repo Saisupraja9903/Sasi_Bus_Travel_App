@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,11 +8,24 @@ import {
   TextInput,
   ScrollView,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  LayoutAnimation,
+  UIManager,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import AppModal from "./AppModal";
+
+// Enable LayoutAnimation for Android
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function PersonalDetailsScreen() {
   const navigation = useNavigation();
@@ -40,6 +54,31 @@ export default function PersonalDetailsScreen() {
   const [displayMonth, setDisplayMonth] = useState(new Date(initialDob));
   const [calendarView, setCalendarView] = useState("days"); // "days", "months", "years"
 
+  // Referral State
+  const [referralStatus, setReferralStatus] = useState("idle"); // idle, loading, success, error
+
+  const handleApplyReferral = () => {
+    if (!referral.trim()) return;
+    
+    setReferralStatus("loading");
+    
+    // Simulate API call for code verification
+    setTimeout(() => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      if (referral.toUpperCase() === "GOBUS500") {
+        setReferralStatus("success");
+      } else {
+        setReferralStatus("error");
+      }
+    }, 1200);
+  };
+
+  const handleRemoveReferral = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setReferral("");
+    setReferralStatus("idle");
+  };
+
   // Passenger State
   const [passengers, setPassengers] = useState(paramPassengers || []);
   const [showAddPassenger, setShowAddPassenger] = useState(false);
@@ -63,17 +102,18 @@ export default function PersonalDetailsScreen() {
     }
     setEmailError(""); // Clear error if valid
 
-    // Navigate back to Profile with updated name and mobile
-    navigation.navigate("Profile", { name, phone: mobile, passengers });
+    // Navigate back to Profile with updated data
+    navigation.navigate("Profile", { name, phone: mobile, passengers, email, dob: dob.toISOString(), gender });
   };
 
   // Using JSON.stringify for a simple deep comparison of the passengers array
-  const hasChanges =
+  const hasChanges = React.useMemo(() => 
     name !== initialName ||
     mobile !== initialMobile ||
     email !== initialEmail ||
     dob.getTime() !== initialDob.getTime() ||
-    JSON.stringify(passengers) !== JSON.stringify(paramPassengers || []);
+    JSON.stringify(passengers) !== JSON.stringify(paramPassengers || []),
+  [name, mobile, email, dob, passengers, paramPassengers]);
 
   // Add Passenger Logic
   const handleAddPassenger = () => {
@@ -123,14 +163,12 @@ export default function PersonalDetailsScreen() {
     return new Date(year, month + 1, 0).getDate();
   };
 
-  const changeMonth = (offset) => {
-    const newDate = new Date(
-      displayMonth.getFullYear(),
-      displayMonth.getMonth() + offset,
-      1
-    );
-    setDisplayMonth(newDate);
-  };
+  const changeMonth = useCallback((offset) => {
+    setDisplayMonth(prev => {
+      const newDate = new Date(prev.getFullYear(), prev.getMonth() + offset, 1);
+      return newDate;
+    });
+  }, []);
 
   // Dynamic Data
   const currentYear = new Date().getFullYear();
@@ -138,16 +176,19 @@ export default function PersonalDetailsScreen() {
   const monthsList = Array.from({ length: 12 }, (_, i) => new Date(0, i).toLocaleString('default', { month: 'long' }));
 
   return (
-    <SafeAreaView style={styles.container}>
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color="black" />
+          </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Personal Details</Text>
-      </View>
+          <Text style={styles.headerTitle}>Personal Details</Text>
+        </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Full Name */}
@@ -301,22 +342,56 @@ export default function PersonalDetailsScreen() {
         ))}
       </View>
 
-      {/* Referral Code */}
-      <Text style={styles.referralTitle}>Have a referal code</Text>
+      {/* Referral Code Section */}
+      <View style={styles.referralContainer}>
+        <Text style={styles.referralTitle}>Have a referral code?</Text>
 
-      <View style={styles.referralBox}>
-        <Feather name="gift" size={20} color="#1E6BD6" />
+        <View style={[
+          styles.referralBox,
+          referralStatus === 'success' && styles.referralBoxSuccess,
+          referralStatus === 'error' && styles.referralBoxError
+        ]}>
+          <Feather 
+            name={referralStatus === 'success' ? "check-circle" : "gift"} 
+            size={20} 
+            color={referralStatus === 'success' ? "#4CAF50" : "#1E6BD6"} 
+          />
 
-        <TextInput
-          placeholder="Enter the code"
-          style={styles.input}
-          value={referral}
-          onChangeText={setReferral}
-        />
+          <TextInput
+            placeholder="e.g. GOBUS500"
+            style={styles.referralInput}
+            value={referral}
+            onChangeText={(text) => {
+              setReferral(text.toUpperCase());
+              if (referralStatus !== 'idle') setReferralStatus('idle');
+            }}
+            editable={referralStatus !== 'success' && referralStatus !== 'loading'}
+            autoCapitalize="characters"
+          />
 
-        <TouchableOpacity style={styles.applyButton}>
-          <Text style={styles.applyText}>Apply</Text>
-        </TouchableOpacity>
+          {referralStatus === 'loading' ? (
+            <ActivityIndicator size="small" color="#1E6BD6" />
+          ) : referralStatus === 'success' ? (
+            <TouchableOpacity onPress={handleRemoveReferral}>
+              <Text style={styles.removeText}>Remove</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              style={[styles.applyButton, !referral.trim() && styles.applyButtonDisabled]}
+              onPress={handleApplyReferral}
+              disabled={!referral.trim()}
+            >
+              <Text style={styles.applyText}>Apply</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {referralStatus === 'success' && (
+          <Text style={styles.successMessage}>Applied! Extra discount will be added to your booking.</Text>
+        )}
+        {referralStatus === 'error' && (
+          <Text style={styles.errorMessage}>Invalid code. Please check and try again.</Text>
+        )}
       </View>
 
       {/* SAVE BUTTON */}
@@ -523,6 +598,7 @@ export default function PersonalDetailsScreen() {
         onCancel={() => setDeleteModalVisible(false)}
       />
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -532,11 +608,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ffffff",
-    paddingTop: 90,
-    padding: 20,
+    paddingTop: 20,
+    paddingHorizontal: 20,
   },
 
   header: {
+    paddingTop: 50,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 20,
@@ -651,37 +728,75 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  referralTitle: {
-    marginTop: 10,
-    marginBottom: 10,
-    fontSize: 15,
+  /* Referral Section Styles */
+  referralContainer: {
+    marginTop: 15,
+    marginBottom: 5,
   },
-
+  referralTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 10,
+    marginLeft: 4,
+  },
   referralBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "white",
-    borderRadius: 15,
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
     paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
+    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
   },
-
-  input: {
+  referralBoxSuccess: {
+    borderColor: "#4CAF50",
+    backgroundColor: "#F0FDF4",
+  },
+  referralBoxError: {
+    borderColor: "#F44336",
+    backgroundColor: "#FEF2F2",
+  },
+  referralInput: {
     flex: 1,
     marginLeft: 10,
+    fontSize: 15,
+    color: "#333",
+    fontWeight: "500",
   },
-
   applyButton: {
-    backgroundColor: "#CFCFCF",
-    paddingHorizontal: 20,
+    backgroundColor: "#1E6BD6",
+    paddingHorizontal: 18,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 8,
   },
-
+  applyButtonDisabled: {
+    backgroundColor: "#9CA3AF",
+  },
   applyText: {
     color: "white",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  removeText: {
+    color: "#F44336",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  successMessage: {
+    color: "#4CAF50",
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 4,
+    fontWeight: "500",
+  },
+  errorMessage: {
+    color: "#F44336",
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 4,
+    fontWeight: "500",
   },
 
   saveBtn: {

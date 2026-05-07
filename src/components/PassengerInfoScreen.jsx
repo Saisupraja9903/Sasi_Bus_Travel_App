@@ -10,29 +10,66 @@ import {
   Modal,
   Share,
   TouchableWithoutFeedback,
+  ActivityIndicator,
+  StatusBar,
+  useWindowDimensions,
+  LayoutAnimation,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute } from "@react-navigation/native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import AppModal from "./AppModal";
 
-export default function PersonalInfoScreen({ navigation }) {
-  const route = useRoute();
-  const { selectedSeats = [], boardingPoint, droppingPoint, bus, date: dateString } = route.params || {};
-  const [insurance, setInsurance] = useState(true);
+// Reusable Fare Row Component for clean code and consistent alignment
+const FareRow = ({ label, value, isDiscount = false, isTotal = false }) => (
+  <View style={[styles.fareRow, isTotal && styles.totalRow]}>
+    <Text style={[styles.fareLabel, isTotal && styles.totalLabel]}>{label}</Text>
+    <View style={styles.fareValueContainer}>
+      {isDiscount && <Text style={styles.discountMinus}>- </Text>}
+      <Text style={[
+        styles.fareValue, 
+        isDiscount && styles.discountValue, 
+        isTotal && styles.totalValue
+      ]}>
+        ₹{value}
+      </Text>
+    </View>
+  </View>
+);
 
+export default function PassengerInfoScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmallDevice = screenWidth < 380;
+
+  const route = useRoute();
+  const { 
+    selectedSeats = [], 
+    boardingPoint, 
+    droppingPoint, 
+    bus, 
+    date: dateString,
+    rewardApplied = false,
+    rewardDiscount = 0,
+    verifiedEmail = ""
+  } = route.params || {};
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [insurance, setInsurance] = useState(true);
   const [showTripDetails, setShowTripDetails] = useState(false);
   const [isContactEditOpen, setIsContactEditOpen] = useState(false);
 
-  const phoneNumber = route.params?.phone || "+91 9393939393";
-  const boardingLocation = boardingPoint?.sub || bus?.pickupPoint || "Hyderabad";
-
-  const [contactNumber, setContactNumber] = useState(phoneNumber);
-  const [contactCity, setContactCity] = useState(boardingLocation);
+  // Professional state management for contact
+  const [contactNumber, setContactNumber] = useState(route.params?.phone || "+91 9393939393");
+  const [contactCity, setContactCity] = useState(boardingPoint?.sub || bus?.pickupPoint || "Location");
 
   // Passenger State
   const [passengers, setPassengers] = useState([
-    { id: 1, name: "", age: "", gender: "Male" },
+    ...selectedSeats.map((seat, index) => ({
+      id: Date.now() + index,
+      name: "", age: "", gender: "Male", seatId: seat
+    }))
   ]);
   const [isPassengerModalOpen, setIsPassengerModalOpen] = useState(false);
   const [modalPassengers, setModalPassengers] = useState([]);
@@ -42,67 +79,74 @@ export default function PersonalInfoScreen({ navigation }) {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [passengerToDelete, setPassengerToDelete] = useState(null);
 
-  const departureTime = boardingPoint?.time || bus?.departure || "21:00 PM";
-  const arrivalTime = droppingPoint?.time || bus?.arrival || "06:15 PM";
-  const sourceCity = boardingPoint?.name || bus?.pickupPoint || "Hyderabad";
-  const destinationCity = droppingPoint?.name || bus?.droppingPoint || "Kakinada";
-  const duration = bus?.duration 
-    ? `${Math.floor(bus.duration)}hrs ${Math.round((bus.duration % 1) * 60)}mins` 
-    : "9hrs 15mins";
+  // Coupon State
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCouponDiscount, setAppliedCouponDiscount] = useState(0);
+  const [appliedCouponCode, setAppliedCouponCode] = useState("");
+  const [couponError, setCouponError] = useState("");
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
-  const travelDate = dateString ? new Date(dateString) : new Date();
+  // Derived Trip Data (Dynamic & Flexible)
+  const tripDetails = React.useMemo(() => {
+    const departureTime = boardingPoint?.time || bus?.departure || "00:00";
+    const arrivalTime = droppingPoint?.time || bus?.arrival || "00:00";
+    const sourceCity = boardingPoint?.name || bus?.pickupPoint || "Source";
+    const destinationCity = droppingPoint?.name || bus?.droppingPoint || "Destination";
+    const duration = bus?.duration 
+      ? `${Math.floor(bus.duration)}h ${Math.round((bus.duration % 1) * 60)}m` 
+      : "N/A";
+    const travelDate = dateString ? new Date(dateString) : new Date();
+    
+    // Arrival calculation
+    const departureHour = parseInt(departureTime.split(':')[0]);
+    const arrivalHour = parseInt(arrivalTime.split(':')[0]);
+    const isNextDay = arrivalHour < departureHour || (departureTime.includes('PM') && arrivalTime.includes('AM'));
+    const arrivalDate = new Date(travelDate);
+    if (isNextDay) arrivalDate.setDate(travelDate.getDate() + 1);
+
+    return {
+      departureTime, arrivalTime, sourceCity, destinationCity, duration, travelDate, arrivalDate, isNextDay
+    };
+  }, [bus, boardingPoint, droppingPoint, dateString]);
 
   // Helper to format date
-  const formatDateWithWeekday = (date) => {
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+  const formatDateWithWeekday = (date) => date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const formatShortDate = (date) => date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/\s/g, ' ');
+
+  const formatTripHeaderDate = (date) => {
+    const weekday = date.toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
+    const dayMonthYear = date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
     });
+
+    return `${weekday}, ${dayMonthYear}`;
   };
-
-  const formatShortDate = (date) => {
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    }).replace(/\s/g, ' ');
-  };
-
-  // Logic to determine if arrival is next day
-  const departureHour = parseInt((departureTime || "00:00").split(':')[0]);
-  const arrivalHour = parseInt((arrivalTime || "00:00").split(':')[0]);
-  const isNextDay = arrivalHour < departureHour || (departureTime.includes('PM') && arrivalTime.includes('AM'));
-
-  const arrivalDate = new Date(travelDate);
-  if (isNextDay) {
-    arrivalDate.setDate(travelDate.getDate() + 1);
-  }
-
-  const departureDateLabel = travelDate.toDateString() === new Date().toDateString() ? 'Today' : formatShortDate(travelDate).split(' ').slice(0, 2).join(' ');
-  const arrivalDateLabel = arrivalDate.toDateString() === new Date(new Date().setDate(new Date().getDate() + 1)).toDateString() ? 'Tomorrow' : formatShortDate(arrivalDate).split(' ').slice(0, 2).join(' ');
 
   const onShare = async () => {
+    const { sourceCity, destinationCity, departureTime, arrivalTime, travelDate } = tripDetails;
     try {
       await Share.share({
-        message: `My Bus Trip Details:\n\nBus: ${bus?.name || "Srivastav Travels"} (${bus?.typeTag || "A/c Sleeper (2+1)"})\nRoute: ${sourceCity} to ${destinationCity}\nDate: ${formatDateWithWeekday(travelDate)}\nDeparture: ${departureTime} from ${boardingLocation}\nArrival: ${arrivalTime} at ${droppingPoint?.sub || destinationCity}\nSeats: ${seatLabel}`,
+        message: `My Bus Trip Details:\n\nBus: ${bus?.name} (${bus?.typeTag})\nRoute: ${sourceCity} to ${destinationCity}\nDate: ${formatDateWithWeekday(travelDate)}\nDeparture: ${departureTime} from ${boardingPoint?.sub}\nArrival: ${arrivalTime} at ${droppingPoint?.sub}\nSeats: ${selectedSeats.join(", ")}`,
       });
     } catch (error) {
       console.error(error.message);
     }
   };
 
-  const seatLabel = selectedSeats.length ? selectedSeats.join(", ") : "L10";
-  const seatType = bus?.typeTag || "Sleeper";
-  
-  // Fare Calculation
-  const ticketPrice = bus?.price || 1000;
-  const baseFare = ticketPrice * selectedSeats.length;
-  const platformFee = 20;
-  const insuranceFee = insurance ? 20 : 0;
-  const discount = 100;
-  const totalPaid = baseFare + platformFee + insuranceFee - discount;
+  // Professional Fare Calculation
+  const pricing = React.useMemo(() => {
+    const ticketPrice = bus?.price || 0;
+    const baseFare = ticketPrice * selectedSeats.length;
+    const platformFee = 20;
+    const insuranceFee = insurance ? 20 : 0;
+    const baseDiscount = 100;
+    const totalDiscount = baseDiscount + rewardDiscount + appliedCouponDiscount;
+    const totalPaid = baseFare + platformFee + insuranceFee - totalDiscount;
+
+    return { baseFare, platformFee, insuranceFee, totalDiscount, totalPaid };
+  }, [bus, selectedSeats, insurance, rewardDiscount, appliedCouponDiscount]);
 
   // Passenger Modal Handlers
   const handleOpenPassengerModal = () => {
@@ -171,6 +215,39 @@ export default function PersonalInfoScreen({ navigation }) {
     }
   };
 
+  // Coupon Validation Logic
+  const handleApplyCoupon = () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+
+    setIsValidatingCoupon(true);
+    setCouponError("");
+
+    // Simulate Production API call delay (1.2s)
+    setTimeout(() => {
+      setIsValidatingCoupon(false);
+      // Example valid codes: GOBUS200 (₹200 discount), SAVE50 (₹50 discount)
+      if (code === "GOBUS200") {
+        setAppliedCouponDiscount(200);
+        setAppliedCouponCode(code);
+        setCouponInput("");
+      } else if (code === "SAVE50") {
+        setAppliedCouponDiscount(50);
+        setAppliedCouponCode(code);
+        setCouponInput("");
+      } else {
+        setCouponError("Invalid coupon code. Please try another.");
+        setAppliedCouponDiscount(0);
+        setAppliedCouponCode("");
+      }
+    }, 1200);
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCouponDiscount(0);
+    setAppliedCouponCode("");
+  };
+
   const handlePassengerChange = (id, field, value) => {
     let finalValue = value;
 
@@ -200,47 +277,71 @@ export default function PersonalInfoScreen({ navigation }) {
     }
   };
 
+  const handleProceedToPay = () => {
+    setIsLoading(true);
+    // Simulate final booking verification API call
+    setTimeout(() => {
+      setIsLoading(false);
+      // navigation.navigate("PaymentScreen", { ...params });
+    }, 1500);
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      {isLoading && <View style={styles.loaderOverlay}><ActivityIndicator size="large" color="#1A73E8" /></View>}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
-        {/* HEADER */}
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Passenger Info</Text>
-        </View>
-
-        {/* OFFER BANNER */}
-        <View style={styles.offerBanner}>
-          <Text style={styles.offerText}>
-            🎉 You are saving 100 off on first booking
-          </Text>
-        </View>
-
-        {/* TRIP SUMMARY */}
-        <View style={styles.tripContainer}>
-          <View style={styles.timeRow}>
-            <View>
-              <Text style={styles.date}>{departureDateLabel}</Text>
-              <Text style={styles.time}>{departureTime}</Text>
-              <Text style={styles.city}>{sourceCity}</Text>
-              <Text style={styles.location}>{boardingLocation}</Text>
-            </View>
-
-            <Text style={styles.duration}>{duration}</Text>
-            <View style={{ alignItems: "flex-end" }}>
-              <Text style={styles.date}>{arrivalDateLabel}</Text>
-              <Text style={styles.time}>{arrivalTime}</Text>
-              <Text style={styles.city}>{destinationCity}</Text>
-              <Text style={styles.location}>{droppingPoint?.sub || destinationCity}</Text>
-            </View>
+        {/* TRIP HEADER */}
+        <View style={[styles.tripHeaderCard, { paddingTop: insets.top }]}>
+          <View style={[styles.headerRow, isSmallDevice && { minHeight: 50 }]}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={22} color="#222" />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, isSmallDevice && { fontSize: 18 }]}>Passenger Info</Text>
           </View>
 
-          <TouchableOpacity onPress={() => setShowTripDetails(true)}>
-            <Text style={styles.viewDetails}>View details</Text>
-          </TouchableOpacity>
+          <LinearGradient
+            colors={["#E6F6A7", "#82D8BF"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.offerBanner}
+          >
+            <Text style={styles.offerText}>🎉 You are saving 100 off on first booking</Text>
+          </LinearGradient>
+
+          <View style={styles.tripContainer}>
+            <View style={styles.tripSummaryRow}>
+              <View style={styles.tripColumn}>
+                <Text style={[styles.date, isSmallDevice && { fontSize: 8 }]}>{formatTripHeaderDate(tripDetails.travelDate)}</Text>
+                <Text style={styles.time}>{tripDetails.departureTime}</Text>
+                <Text style={styles.city}>{tripDetails.sourceCity}</Text>
+                <Text style={[styles.location, isSmallDevice && { maxWidth: 90 }]} numberOfLines={1}>{boardingPoint?.sub}</Text>
+              </View>
+
+              <View style={[styles.durationBlock, isSmallDevice && { minWidth: 70 }]}>
+                <View style={styles.durationLine} />
+                <Text style={styles.duration}>{tripDetails.duration}</Text>
+                <Ionicons name="chevron-forward" size={10} color="#9A9A9A" />
+                <View style={styles.durationLine} />
+              </View>
+
+              <View style={[styles.tripColumn, styles.tripColumnRight]}>
+                <Text style={[styles.date, isSmallDevice && { fontSize: 8 }]}>{formatTripHeaderDate(tripDetails.arrivalDate)}</Text>
+                <Text style={styles.time}>{tripDetails.arrivalTime}</Text>
+                <Text style={styles.city}>{tripDetails.destinationCity}</Text>
+                <Text style={[styles.location, isSmallDevice && { maxWidth: 90 }]} numberOfLines={1}>{droppingPoint?.sub}</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => setShowTripDetails(true)}
+              activeOpacity={0.75}
+              style={styles.viewDetailsButton}
+            >
+              <Text style={styles.viewDetails}>View details</Text>
+            </TouchableOpacity>
+          </View>
 
           <Modal
             animationType="fade"
@@ -264,28 +365,28 @@ export default function PersonalInfoScreen({ navigation }) {
 
               {/* Content */}
               {/* 1. Travel Date */}
-              <Text style={styles.tripDate}>{formatDateWithWeekday(travelDate)}</Text>
+              <Text style={styles.tripDate}>{formatDateWithWeekday(tripDetails.travelDate)}</Text>
               <View style={styles.dividerLight} />
 
               {/* 2. From -> To */}
               <View style={styles.routeRow}>
                 <View>
                   <Text style={styles.cityLabel}>From</Text>
-                  <Text style={styles.cityName}>{sourceCity}</Text>
+                  <Text style={styles.cityName}>{tripDetails.sourceCity}</Text>
                 </View>
 
                 <View style={styles.durationWrapper}>
-                  <Text style={styles.durationText}>{duration}</Text>
+                  <Text style={styles.durationText}>{tripDetails.duration}</Text>
                   <View style={styles.durationLineContainer}>
                     <View style={styles.dot} />
-                    <View style={styles.line} />
+                    <View style={[styles.line, { width: 40 }]} />
                     <View style={styles.dot} />
                   </View>
                 </View>
 
                 <View style={{ alignItems: "flex-end" }}>
                   <Text style={styles.cityLabel}>To</Text>
-                  <Text style={styles.cityName}>{destinationCity}</Text>
+                  <Text style={styles.cityName}>{tripDetails.destinationCity}</Text>
                 </View>
               </View>
 
@@ -304,16 +405,16 @@ export default function PersonalInfoScreen({ navigation }) {
               <View style={styles.pointsRow}>
                 <View style={styles.pointCol}>
                   <Text style={styles.pointLabel}>Boarding Point</Text>
-                  <Text style={styles.pointValue}>{boardingLocation}</Text>
-                  <Text style={styles.pointTime}>{formatShortDate(travelDate)} ({departureTime})</Text>
+                  <Text style={styles.pointValue}>{boardingPoint?.sub}</Text>
+                  <Text style={styles.pointTime}>{formatShortDate(tripDetails.travelDate)} ({tripDetails.departureTime})</Text>
                 </View>
 
                 <View style={[styles.pointCol, { alignItems: "flex-end" }]}>
                   <Text style={styles.pointLabel}>Dropping Point</Text>
                   <Text style={styles.pointValue}>
-                    {droppingPoint?.sub || destinationCity}
+                    {droppingPoint?.sub}
                   </Text>
-                  <Text style={styles.pointTime}>{formatShortDate(arrivalDate)} ({arrivalTime})</Text>
+                  <Text style={styles.pointTime}>{formatShortDate(tripDetails.arrivalDate)} ({tripDetails.arrivalTime})</Text>
                 </View>
               </View>
               </View>
@@ -334,13 +435,20 @@ export default function PersonalInfoScreen({ navigation }) {
 
           <View style={styles.contactRow}>
             <Ionicons name="call" size={16} color="#555" />
-            <Text style={styles.contactText}>{phoneNumber}</Text>
+            <Text style={styles.contactText}>{contactNumber}</Text>
           </View>
 
           <View style={styles.contactRow}>
             <Ionicons name="location" size={16} color="#555" />
-            <Text style={styles.contactText}>{boardingLocation}</Text>
+            <Text style={styles.contactText}>{contactCity}</Text>
           </View>
+
+          {verifiedEmail ? (
+            <View style={[styles.contactRow, { marginTop: 10 }]}>
+              <Ionicons name="checkmark-done-circle" size={16} color="#2E7D32" />
+              <Text style={[styles.contactText, { color: '#2E7D32', fontWeight: '500' }]}>{verifiedEmail} (Verified)</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* CONTACT EDIT MODAL */}
@@ -413,9 +521,12 @@ export default function PersonalInfoScreen({ navigation }) {
             <View key={passenger.id} style={styles.passengerRow}>
               <Ionicons name="person-circle" size={32} color="#555" />
               <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Text style={styles.passengerTitle}>
                   {passenger.name || `Passenger ${index + 1}`}
                 </Text>
+                {passenger.seatId && <Text style={[styles.seatBadge, { marginLeft: 6, marginTop: 0 }]}>{passenger.seatId}</Text>}
+              </View>
                 <Text style={styles.smallText}>
                   {passenger.age ? `${passenger.age} years, ` : ""}
                   {passenger.gender}
@@ -432,7 +543,7 @@ export default function PersonalInfoScreen({ navigation }) {
             </View>
           ))}
           <Text style={[styles.smallText, { marginTop: 8 }]}>
-            Seats: {seatLabel} ({seatType})
+            Total Seats: {selectedSeats.join(", ")} ({bus?.typeTag})
           </Text>
         </View>
 
@@ -564,15 +675,53 @@ export default function PersonalInfoScreen({ navigation }) {
             placeholder="Enter coupon code"
             style={styles.couponInput}
             placeholderTextColor="#999"
+            value={couponInput}
+            onChangeText={(text) => {
+              setCouponInput(text.toUpperCase());
+              if (couponError) setCouponError("");
+            }}
+            editable={!isValidatingCoupon}
+            autoCapitalize="characters"
           />
-          <TouchableOpacity activeOpacity={0.7}>
-            <Text style={styles.apply}>APPLY</Text>
+          <TouchableOpacity 
+            activeOpacity={0.7} 
+            onPress={handleApplyCoupon}
+            disabled={isValidatingCoupon || !couponInput.trim()}
+          >
+            {isValidatingCoupon ? (
+              <ActivityIndicator size="small" color="#1A73E8" />
+            ) : (
+              <Text style={[styles.apply, !couponInput.trim() && { color: '#999' }]}>APPLY</Text>
+            )}
           </TouchableOpacity>
         </View>
+        {couponError ? <Text style={styles.couponErrorText}>{couponError}</Text> : null}
 
-        <TouchableOpacity style={styles.couponItem}>
-          <Text>🎉 Student/Corp.reward</Text>
-          <Ionicons name="chevron-forward" size={18} />
+        {appliedCouponCode ? (
+          <View style={styles.appliedCouponTag}>
+            <View style={styles.appliedCouponInfo}>
+              <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+              <Text style={styles.appliedCouponText}>
+                Code <Text style={{fontWeight: '700'}}>{appliedCouponCode}</Text> applied! Extra ₹{appliedCouponDiscount} off.
+              </Text>
+            </View>
+            <TouchableOpacity onPress={handleRemoveCoupon}>
+              <Text style={styles.removeCouponText}>Remove</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        <TouchableOpacity
+          style={styles.couponItem}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate("StudentCorpReward")}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={rewardApplied ? { color: '#2E7D32', fontWeight: '700' } : null}>
+              {rewardApplied ? "✓ Student/Corp. Reward Applied" : "Student/Corp.reward"}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={rewardApplied ? "#2E7D32" : "#000"} />
         </TouchableOpacity>
 
         {/* TRAVEL PROTECTION */}
@@ -594,56 +743,44 @@ export default function PersonalInfoScreen({ navigation }) {
         </View>
 
         {/* FARE BREAKUP */}
-        <View style={styles.card}>
-          <View style={styles.rowBetween}>
-            <Text style={styles.cardTitle}>Fare Breakup</Text>
-            <Text style={styles.price}>₹{totalPaid}</Text>
+        <View style={styles.fareCard}>
+          <View style={styles.fareHeader}>
+            <Text style={styles.fareHeaderTitle}>Fare Breakup</Text>
+            <Text style={styles.fareHeaderAmount}>₹{pricing.totalPaid}</Text>
           </View>
 
-          <View style={styles.fareRow}>
-            <Text>Base Fare</Text>
-            <Text>₹{baseFare}</Text>
+          <View style={styles.fareBody}>
+            <FareRow label="Base Fare" value={pricing.baseFare} />
+            <FareRow 
+              label="Discounts & Offers" 
+              value={pricing.totalDiscount} 
+              isDiscount={true} 
+            />
+            <FareRow label="Platform Fee" value={pricing.platformFee} />
+            <FareRow label="Travel Protection" value={pricing.insuranceFee} />
           </View>
 
-          <View style={styles.fareRow}>
-            <Text style={{ color: "#2F80ED" }}>Discount</Text>
-            <Text>- ₹{discount}</Text>
-          </View>
+          <View style={styles.fareDivider} />
 
-          <View style={styles.fareRow}>
-            <Text>Platform fee</Text>
-            <Text>₹{platformFee}</Text>
-          </View>
-
-          <View style={styles.fareRow}>
-            <Text>Travel Protection</Text>
-            <Text>₹{insuranceFee}</Text>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.fareRow}>
-            <Text style={styles.total}>Total Paid</Text>
-            <Text style={styles.total}>₹{totalPaid}</Text>
-          </View>
+          <FareRow label="Total Amount" value={pricing.totalPaid} isTotal={true} />
         </View>
 
         <View style={{ height: 80 }} />
       </ScrollView>
 
       {/* BOTTOM BAR */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <View>
           <Text style={styles.totalPaid}>Total Paid</Text>
-          <Text style={styles.totalAmount}>₹{totalPaid} for {selectedSeats.length} Seat(s)</Text>
+          <Text style={styles.totalAmount}>₹{pricing.totalPaid} for {selectedSeats.length} Seat(s)</Text>
         </View>
 
-        <TouchableOpacity style={styles.payButton}>
-          <Text style={styles.payText}>Proceed to Pay</Text>
+        <TouchableOpacity style={styles.payButton} onPress={handleProceedToPay}>
+          <Text style={styles.payText}>Proceed</Text>
         </TouchableOpacity>
       </View>
 
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -654,39 +791,59 @@ const styles = StyleSheet.create({
     backgroundColor: "#EAF2FA",
   },
 
+  tripHeaderCard: {
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#D7E5F4",
+  },
+
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    minHeight: 58,
+    paddingHorizontal: 18,
+    paddingTop: 8,
     position: "relative",
+    backgroundColor: "#FFFFFF",
   },
 
   backButton: {
     position: "absolute",
-    left: 16,
+    left: 12,
+    bottom: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 1,
   },
 
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "600",
+    color: "#252525",
   },
 
   offerBanner: {
-    backgroundColor: "#DFF5E4",
-    padding: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     alignItems: "center",
+    justifyContent: "center",
   },
 
   offerText: {
-    fontSize: 13,
+    fontSize: 12,
+    color: "#111111",
+    fontWeight: "500",
   },
 
   tripContainer: {
     backgroundColor: "#fff",
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingTop: 13,
+    paddingBottom: 10,
   },
 
   editContactCard: {
@@ -751,20 +908,80 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
 
-  date: { fontSize: 11, color: "#777" },
-  time: { fontSize: 18, fontWeight: "600" },
-  city: { fontSize: 14, fontWeight: "500" },
-  location: { fontSize: 11, color: "#777" },
+  tripSummaryRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+
+  tripColumn: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  tripColumnRight: {
+    alignItems: "flex-end",
+  },
+
+  date: {
+    fontSize: 9,
+    color: "#5E5E5E",
+    marginBottom: 2,
+    fontWeight: "500",
+  },
+  time: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#161616",
+    marginBottom: 16,
+  },
+  city: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#202020",
+  },
+  location: {
+    fontSize: 9,
+    color: "#676767",
+    marginTop: 2,
+    maxWidth: 115,
+  },
 
   duration: {
-    alignSelf: "center",
-    color: "#888",
+    color: "#8E8E8E",
+    fontSize: 9,
+    marginHorizontal: 4,
+    fontWeight: "500",
+  },
+
+  durationBlock: {
+    flex: 0.82,
+    minWidth: 86,
+    maxWidth: 118,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 43,
+  },
+
+  durationLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#D2D2D2",
   },
 
   viewDetails: {
-    color: "#1A73E8",
-    marginTop: 10,
-    textAlign: "right",
+    color: "#006FFF",
+    fontSize: 12,
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
+
+  viewDetailsButton: {
+    alignSelf: "flex-end",
+    paddingTop: 6,
+    paddingBottom: 1,
+    paddingLeft: 12,
   },
 
   card: {
@@ -773,7 +990,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
   },
-
+  
   rowBetween: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -873,25 +1090,90 @@ const styles = StyleSheet.create({
     color: "#1A73E8",
     marginTop: 4,
   },
-
+  
+  /* PREMIUM FARE CARD STYLES */
+  fareCard: {
+    backgroundColor: "#FFFFFF",
+    marginHorizontal: 16,
+    marginVertical: 12,
+    borderRadius: 22,
+    padding: 20,
+    // Premium soft shadow
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#F0F0F0",
+  },
+  fareHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  fareHeaderTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1A1A1A",
+    letterSpacing: -0.3,
+  },
+  fareHeaderAmount: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1A73E8",
+  },
+  fareBody: {
+    marginBottom: 10,
+  },
   fareRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginVertical: 6,
+    alignItems: "center",
+    paddingVertical: 8,
   },
-
-  divider: {
-    height: 1,
-    backgroundColor: "#ddd",
-    marginVertical: 10,
+  fareLabel: {
+    fontSize: 14,
+    color: "#666666",
+    fontWeight: "500",
   },
-
-  total: {
+  fareValueContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  fareValue: {
+    fontSize: 15,
     fontWeight: "600",
+    color: "#1A1A1A",
   },
-
-  price: {
-    color: "#1A73E8",
+  discountMinus: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#2E7D32",
+  },
+  discountValue: {
+    color: "#2E7D32",
+  },
+  fareDivider: {
+    height: 1,
+    backgroundColor: "#F0F0F0",
+    marginVertical: 12,
+  },
+  totalRow: {
+    paddingVertical: 4,
+    marginTop: 4,
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1A1A1A",
+  },
+  totalValue: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#1A1A1A",
+    letterSpacing: -0.5,
   },
 
   bottomBar: {
@@ -935,6 +1217,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: "90%",
+    maxWidth: 500,
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 20,
@@ -1029,6 +1312,7 @@ const styles = StyleSheet.create({
   },
   contactModalContent: {
     width: "90%",
+    maxWidth: 450,
     backgroundColor: "#fff",
     borderRadius: 20,
     padding: 20,
@@ -1089,6 +1373,7 @@ const styles = StyleSheet.create({
   },
   passengerModalContent: {
     width: "90%",
+    maxWidth: 500,
     maxHeight: "80%",
     backgroundColor: "#fff",
     borderRadius: 20,
@@ -1185,5 +1470,61 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginLeft: 4,
     fontWeight: '500',
+  },
+  couponErrorText: {
+    color: "#D32F2F",
+    fontSize: 11,
+    marginLeft: 20,
+    marginTop: -5,
+    marginBottom: 10,
+    fontWeight: '500',
+  },
+  appliedCouponTag: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    marginHorizontal: 16,
+    padding: 12,
+    borderRadius: 10,
+    marginTop: -5,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
+  },
+  appliedCouponInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  appliedCouponText: {
+    fontSize: 12,
+    color: '#2E7D32',
+    marginLeft: 8,
+  },
+  removeCouponText: {
+    fontSize: 12,
+    color: '#D32F2F',
+    fontWeight: '700',
+    marginLeft: 10,
+  },
+  loaderOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  seatBadge: {
+    backgroundColor: '#EAF2FA',
+    color: '#1A73E8',
+    fontSize: 10,
+    fontWeight: '700',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginTop: 2,
+    overflow: 'hidden',
   },
 });

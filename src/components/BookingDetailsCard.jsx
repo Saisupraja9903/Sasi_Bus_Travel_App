@@ -1,49 +1,73 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useCallback } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 
-export default function BookingDetailsCard() {
+export default function BookingDetailsCard({ booking, onCancel, onResell }) {
+  // Fallback data if props are missing
+  const {
+    travels = "Srivastav Travels",
+    source = "Hyderabad",
+    destination = "Kakinada",
+    from = "13 Mar 2026 (21:00PM)",
+    to = "14 Mar 2026 (06:16AM)",
+    passengerName = "Niharika",
+    gender = "Female",
+    age = "22",
+    seat = "U4",
+    busType = "A/c Sleeper (2+1)",
+    duration = "09hrs 15 mins"
+  } = booking || {};
+
+  // Parse 'from' and 'to' if they contain newlines (format from BookingScreen)
+  const boardingPoint = from.includes('\n') ? from.split('\n')[0] : "Ameerpet";
+  const boardingTime = from.includes('\n') ? from.split('\n')[1] : from;
+  
+  const droppingPoint = to.includes('\n') ? to.split('\n')[0] : "JNTU, Kakinada";
+  const droppingTime = to.includes('\n') ? to.split('\n')[1] : to;
+
+  const statusDate = boardingTime.split('(')[0].trim();
+
   return (
     <View style={styles.card}>
       {/* Status */}
-      <Text style={styles.status}>Confirmed, Friday, March 13, 2026</Text>
+      <Text style={styles.status}>Confirmed, {statusDate}</Text>
 
       {/* Route */}
       <View style={styles.routeContainer}>
         <View>
           <Text style={styles.smallLabel}>From</Text>
-          <Text style={styles.city}>Hyderabad</Text>
+          <Text style={styles.city}>{source}</Text>
         </View>
 
         <View style={styles.durationContainer}>
-          <Text style={styles.duration}>09hrs 15 mins</Text>
+          <Text style={styles.duration}>{duration}</Text>
           <View style={styles.line} />
         </View>
 
         <View>
           <Text style={styles.smallLabel}>To</Text>
-          <Text style={styles.city}>Kakinada</Text>
+          <Text style={styles.city}>{destination}</Text>
         </View>
       </View>
 
       {/* Travel */}
       <View style={styles.section}>
         <Text style={styles.smallLabel}>Travel</Text>
-        <Text style={styles.value}>Srivastav Travels</Text>
-        <Text style={styles.subValue}>A/c Sleeper (2+1)</Text>
+        <Text style={styles.value}>{travels}</Text>
+        <Text style={styles.subValue}>{busType}</Text>
       </View>
 
       {/* Boarding + Drop */}
       <View style={styles.row}>
         <View>
           <Text style={styles.smallLabel}>Boarding Point</Text>
-          <Text style={styles.value}>Ameerpet</Text>
-          <Text style={styles.subValue}>13 Mar 2026 (21:00PM)</Text>
+          <Text style={styles.value}>{boardingPoint}</Text>
+          <Text style={styles.subValue}>{boardingTime}</Text>
         </View>
 
         <View>
           <Text style={styles.smallLabel}>Dropping Point</Text>
-          <Text style={styles.value}>JNTU, Kakinada</Text>
-          <Text style={styles.subValue}>14 Mar 2026 (06:16AM)</Text>
+          <Text style={styles.value}>{droppingPoint}</Text>
+          <Text style={styles.subValue}>{droppingTime}</Text>
         </View>
       </View>
 
@@ -51,23 +75,29 @@ export default function BookingDetailsCard() {
       <View style={styles.row}>
         <View>
           <Text style={styles.smallLabel}>Passenger</Text>
-          <Text style={styles.value}>Niharika</Text>
-          <Text style={styles.subValue}>Female 22 years</Text>
+          <Text style={styles.value}>{passengerName}</Text>
+          <Text style={styles.subValue}>{gender} {age} years</Text>
         </View>
 
         <View>
           <Text style={styles.smallLabel}>Seat</Text>
-          <Text style={styles.seat}>U4</Text>
+          <Text style={styles.seat}>{seat}</Text>
         </View>
       </View>
 
       {/* Buttons */}
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.cancelBtn}>
+        <TouchableOpacity 
+          style={styles.cancelBtn} 
+          onPress={() => onCancel && onCancel(booking)}
+        >
           <Text style={styles.buttonText}>Cancel Ticket</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.resellBtn}>
+        <TouchableOpacity 
+          style={styles.resellBtn}
+          onPress={() => onResell && onResell(booking)}
+        >
           <Text style={styles.buttonText}>Resell Ticket</Text>
         </TouchableOpacity>
       </View>

@@ -20,15 +20,16 @@ import BookingDetailsScreen from "./src/screens/BookingDetailsScreen";
 import OfferScreen from "./src/screens/OfferScreen";
 import SleeperSeatSelectionScreen from "./src/components/SleeperSeatSelectionScreen";
 import SeaterSeatSelectionScreen from "./src/components/SeaterSeatSelectionScreen";
-import HelpScreen from "./src/screens/HelpScreen";
-import FAQListScreen from "./src/screens/FAQListScreen";
-import FAQAnswerScreen from "./src/screens/FAQAnswerScreen";
+import ChatBotScreen from "./src/screens/ChatBotScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import PersonalDetailsScreen from "./src/components/PersonalDetailsScreen";
 import ReferScreen from "./src/components/ReferScreen";
 import WalletScreen from "./src/components/WalletScreen";
 import BoardingScreen from "./src/components/BoardingScreen";
 import PassengerInfoScreen from "./src/components/PassengerInfoScreen";
+import ReviewsScreen from "./src/components/ReviewsScreen";
+import StudentCorpRewardScreen from "./src/components/StudentCorpRewardScreen";
+import StudentCorpOtpScreen from "./src/components/StudentCorpOtpScreen";
 
 import BusDetailsBottomSheet from "./src/components/BusDetailsBottomSheet";
 
@@ -108,6 +109,16 @@ export default function App() {
           />
 
           <Stack.Screen
+            name="StudentCorpReward"
+            component={StudentCorpRewardScreen}
+          />
+
+          <Stack.Screen
+            name="StudentCorpOtp"
+            component={StudentCorpOtpScreen}
+          />
+
+          <Stack.Screen
             name="BookingDetails"
             component={BookingDetailsScreen}
           />
@@ -128,18 +139,8 @@ export default function App() {
           />
 
           <Stack.Screen
-            name="Help"
-            component={HelpScreen}
-          />
-
-          <Stack.Screen
-            name="FAQList"
-            component={FAQListScreen}
-          />
-
-          <Stack.Screen
-            name="FAQAnswer"
-            component={FAQAnswerScreen}
+            name="ChatBot"
+            component={ChatBotScreen}
           />
 
           <Stack.Screen
@@ -162,6 +163,10 @@ export default function App() {
             component={WalletScreen}
           />
 
+          <Stack.Screen
+            name="Reviews"
+            component={ReviewsScreen}
+          />
 
           <Stack.Screen
             name="BusDetailsBottomSheet"

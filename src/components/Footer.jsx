@@ -22,19 +22,31 @@ return (
 
   {/* Floating Chatbot */}
   <View style={styles.chatbotWrapper}>
-        <TouchableOpacity style={styles.chatbotCircle} onPress={() => navigation.navigate("Help", { phone })}>
+    <TouchableOpacity 
+      style={styles.chatbotCircle} 
+      onPress={() => navigation.navigate("ChatBot", { phone })}
+      activeOpacity={0.8}
+    >
       <Image source={FOOTER_IMAGES.CHATBOT} style={styles.chatbotIcon} />
     </TouchableOpacity>
   </View>
 
   <View style={styles.footer}>
 
-        <TouchableOpacity style={styles.item} onPress={() => navigation.navigate("Home", { phone })}>
+    <TouchableOpacity 
+      style={styles.item} 
+      onPress={() => navigation.navigate("Home", { phone })}
+      activeOpacity={0.7}
+    >
       <Ionicons name="home" size={24} color={getColor("Home")} />
       <Text style={[styles.text, { color: getColor("Home") }]}>Home</Text>
     </TouchableOpacity>
 
-        <TouchableOpacity style={styles.item} onPress={() => navigation.navigate("Bookings", { phone })}>
+    <TouchableOpacity 
+      style={styles.item} 
+      onPress={() => navigation.navigate("Bookings", { phone })}
+      activeOpacity={0.7}
+    >
       <MaterialCommunityIcons
         name="ticket-confirmation-outline"
         size={24}
@@ -48,12 +60,20 @@ return (
     {/* Space for chatbot */}
     <View style={{ width: 60 }} />
 
-        <TouchableOpacity style={styles.item} onPress={() => navigation.navigate("Offers", { phone })}>
+    <TouchableOpacity 
+      style={styles.item} 
+      onPress={() => navigation.navigate("Offers", { phone })}
+      activeOpacity={0.7}
+    >
       <MaterialIcons name="local-offer" size={24} color={getColor("Offers")} />
       <Text style={[styles.text, { color: getColor("Offers") }]}>Offers</Text>
     </TouchableOpacity>
 
-        <TouchableOpacity style={styles.item} onPress={() => navigation.navigate("Profile", { phone })}>
+    <TouchableOpacity 
+      style={styles.item} 
+      onPress={() => navigation.navigate("Profile", { phone })}
+      activeOpacity={0.7}
+    >
       <Ionicons name="person-outline" size={24} color={getColor("Profile")} />
       <Text style={[styles.text, { color: getColor("Profile") }]}>
         Profile
